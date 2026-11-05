@@ -16,6 +16,7 @@ make test              # unit tests (Swift Testing)
 make bundle            # release .app, -macos-arm64.zip and SHA256SUMS under dist/
 make stop              # quit a running instance
 make reset-permissions # clear TCC answers + the first-run flag
+make dev-cert          # one-time: stable signing identity so grants survive rebuilds
 make clean
 ```
 
@@ -90,9 +91,9 @@ snippet body.
 - System prompts only appear for a bundled, `/Applications`-installed app;
   `swift run` does not get them.
 - Ad-hoc signatures change on every build, and macOS keys TCC entries to the
-  signature, so rebuilds re-prompt. Export `HEYCAST_SIGN_IDENTITY` with a
-  stable codesigning identity (e.g. a self-signed "Heycast Dev" cert) to keep
-  grants across `make run`.
+  signature, so rebuilds re-prompt. Run `make dev-cert` once: it creates a
+  self-signed "Heycast Dev" identity that the scripts use automatically, so
+  grants survive `make run`. `HEYCAST_SIGN_IDENTITY` overrides the identity.
 - Screen Recording and Full Disk Access only take effect after relaunching.
   macOS offers "Quit & Reopen" for screen recording; full disk access is
   granted by adding the app with `+` in the pane.

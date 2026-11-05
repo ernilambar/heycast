@@ -10,7 +10,7 @@ TESTING_PLUGIN := $(SWIFT_USR)lib/swift/host/plugins/testing/libTestingMacros.dy
 TEST_PLUGIN_FLAGS := $(if $(wildcard $(TESTING_PLUGIN)),-Xswiftc -load-plugin-library -Xswiftc $(TESTING_PLUGIN))
 endif
 
-.PHONY: run test bundle stop reset-permissions clean
+.PHONY: run test bundle stop reset-permissions dev-cert clean
 
 # scripts/dev.sh owns bundle assembly so there is one build path; use
 # `make bundle` for the release artifacts under dist/.
@@ -33,6 +33,10 @@ stop:
 reset-permissions:
 	-@tccutil reset All $(BUNDLE_ID)
 	-@defaults delete $(BUNDLE_ID) setup.wizard.shown
+
+# One-time: a stable self-signed identity so TCC grants survive rebuilds.
+dev-cert:
+	./scripts/dev-cert.sh
 
 clean:
 	swift package clean
