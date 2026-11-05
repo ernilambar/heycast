@@ -8,6 +8,10 @@ let package = Package(
         .executableTarget(
             name: "Heycast",
             path: "Sources/Heycast"
+        ),
+        .testTarget(
+            name: "HeycastTests",
+            dependencies: ["Heycast"]
         )
     ]
 )

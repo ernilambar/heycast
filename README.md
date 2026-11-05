@@ -13,6 +13,7 @@ installed applications and launches the selected one.
 
 ```sh
 make run               # debug build, install to /Applications, launch
+make test              # unit tests (Swift Testing)
 make bundle            # release .app, -macos-arm64.zip and SHA256SUMS under dist/
 make stop              # quit a running instance
 make reset-permissions # clear TCC answers + the first-run flag
@@ -128,12 +129,30 @@ scripts/lib.sh           plist metadata + bundle assembly, shared by the scripts
 scripts/dev.sh           debug/release build, install to /Applications, relaunch
 scripts/bundle.sh        release gate, bundle, zip archive, SHA256SUMS
 Makefile                 thin wrappers around the scripts
+Tests/HeycastTests/      Swift Testing suites for the pure logic
+.github/workflows/ci.yml test workflow, macOS runner
 ```
 
 The panel is transparent and borderless, 620 points wide and 157–385 points
 tall depending on the result count, centered on the screen under the pointer
 with its top edge offset 20% from the top. It is `nonactivatingPanel` +
 `canBecomeKey`, so it can take keyboard focus from the launcher.
+
+## Tests
+
+`make test` runs the Swift Testing suites in `Tests/HeycastTests/`: search
+ranking, usage scoring and persistence, config path resolution, and launch
+history pruning. These cover the pure logic; the palette, panel, hotkey and
+TCC code are not unit-tested because they need real UI/system state.
+
+The test target depends on the executable target and imports it with
+`@testable`, so the app needs no separate library target. Swift Testing ships
+with the Swift 6 Command Line Tools, but SwiftPM only injects its macro plugin
+in an Xcode toolchain layout, so `make test` passes the plugin path itself
+when Xcode is absent.
+
+CI (`.github/workflows/ci.yml`) runs the suite on `macos-15` for pushes to
+`main` and every pull request.
 
 ## Next
 
