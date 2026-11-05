@@ -17,9 +17,9 @@ final class PaletteController: NSObject, NSWindowDelegate {
     private let panel: PalettePanel
     private var keyMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
-    /// The app to hand focus back to when a snippet is pasted, captured before
-    /// opening the palette activates Heycast.
-    private var previousApplication: NSRunningApplication?
+    /// The app to hand focus back to when a snippet is pasted or a window
+    /// command runs, captured before opening the palette activates Heycast.
+    private(set) var previousApplication: NSRunningApplication?
     private var activeScope: PaletteScope = .all
     /// Pending wait for the paste target to come forward; replaced by a newer paste.
     private var activationObserver: NSObjectProtocol?

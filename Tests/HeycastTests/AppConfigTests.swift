@@ -81,7 +81,16 @@ private func temporaryDirectory() throws -> URL {
         #expect(try AppConfig.prepareForEditing(at: file) == file)
         let seeded = AppConfig.load(from: file)
         #expect(seeded.snippetsDirectory != nil)
-        #expect(seeded.keymaps == ["palette": "ctrl+space", "snippets": "ctrl+shift+space"])
+        #expect(seeded.keymaps == [
+            "palette": "ctrl+space",
+            "snippets": "ctrl+shift+space",
+            "window.left": "ctrl+alt+left",
+            "window.right": "ctrl+alt+right",
+            "window.top": "ctrl+alt+up",
+            "window.bottom": "ctrl+alt+down",
+            "window.maximize": "ctrl+alt+return",
+            "window.center": "ctrl+alt+c",
+        ])
         #expect(seeded.resolvedKeymap() == .default)
         #expect(try String(contentsOf: file, encoding: .utf8).contains("_comment"))
 
