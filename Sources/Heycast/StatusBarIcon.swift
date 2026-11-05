@@ -12,7 +12,7 @@ enum StatusBarIcon {
     private static let stem = height * 96 / 470
     private static let bar = height * 70 / 470
 
-    static let image: NSImage = {
+    @MainActor static let image: NSImage = {
         let canvas = NSSize(width: 16, height: 16)
         let x = (canvas.width - width) / 2
         let y = (canvas.height - height) / 2
