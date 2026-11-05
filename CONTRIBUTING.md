@@ -103,6 +103,23 @@ snippet body.
 - `make reset-permissions` runs `tccutil reset All <bundle id>` and forgets
   the first-run flag.
 
+## Releasing
+
+`Resources/Info.plist` owns the version: `CFBundleShortVersionString` is the
+release version and `CFBundleVersion` its build number. Nothing else stores it,
+so a bump is a single-file change.
+
+1. Bump both keys in `Resources/Info.plist`.
+2. Add a `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md`.
+3. Run `make test && make bundle` and check `dist/` by hand.
+4. Commit, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main vX.Y.Z`.
+
+Pushing the tag runs `.github/workflows/release.yml`. It rejects a tag whose
+version differs from the plist, runs the tests, builds the bundle, and
+publishes `Heycast-macos-arm64.zip` and `SHA256SUMS` on the GitHub release,
+using that `CHANGELOG.md` section as the release notes. The tag carries a `v`
+prefix; the plist keeps the bare version.
+
 ## Layout
 
 ```
@@ -133,6 +150,9 @@ scripts/bundle.sh        release gate, bundle, zip archive, SHA256SUMS
 Makefile                 thin wrappers around the scripts
 Tests/HeycastTests/      Swift Testing suites for the pure logic
 .github/workflows/ci.yml test workflow, macOS runner
+.github/workflows/release.yml  tag-triggered release, publishes the bundle
+CHANGELOG.md             release notes, one section per version
+LICENSE                  MIT
 ```
 
 ## Tests
@@ -151,7 +171,8 @@ in an Xcode toolchain layout, so `make test` passes the plugin path itself
 when Xcode is absent.
 
 CI (`.github/workflows/ci.yml`) runs the suite on `macos-15` for pushes to
-`main` and every pull request.
+`main` and every pull request. `.github/workflows/release.yml` runs it again on
+a version tag and publishes the release.
 
 ## Next
 

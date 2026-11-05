@@ -8,7 +8,19 @@ the menu bar — no Dock icon, no main window.
 ## Install
 
 - macOS 14 or later, Apple silicon.
-- Requires build and install from source: see [CONTRIBUTING.md](CONTRIBUTING.md).
+- Download `Heycast-macos-arm64.zip` from the
+  [latest release](https://github.com/ernilambar/heycast/releases/latest), unzip
+  it and move `Heycast.app` to `/Applications`.
+- The build is ad-hoc signed and not notarized, so Gatekeeper blocks the first
+  launch. Clear the download quarantine once after moving the app:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/Heycast.app
+  ```
+
+  Alternatively, open the app once and allow it in System Settings → Privacy &
+  Security → "Open Anyway".
+- To build and install from source instead, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 After installing, Heycast starts in the menu bar. There is nothing to launch
 from Launchpad or Finder.

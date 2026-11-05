@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Resources/Info.plist is the only place the version lives, so a tag that
+      # disagrees with it would publish a mislabelled build.
+      - name: Verify tag matches bundle version
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          plist_version="$(plutil -extract CFBundleShortVersionString raw -o - Resources/Info.plist)"
+          if [ "$tag_version" != "$plist_version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match CFBundleShortVersionString $plist_version"
+            exit 1
+          fi
+
+      - name: Run unit tests
+        run: make test
+
+      - name: Build release artifacts
+        run: make bundle
+
+      - name: Extract release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v version="$version" '
+            index($0, "## [" version "]") == 1 { found = 1; next }
+            found && /^## / { exit }
+            found
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            dist/Heycast-macos-arm64.zip \
+            dist/SHA256SUMS \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md
