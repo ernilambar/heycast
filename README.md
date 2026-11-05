@@ -15,16 +15,11 @@ from Launchpad or Finder.
 
 ## Use
 
-- `⌃Space` toggles the palette from any app. Change it with
-  `keymaps.palette` in `config.json`.
-- `⌃⇧Space` opens the palette with snippets only. Change it with
-  `keymaps.snippets`.
-- `⌃⌥←` and `⌃⌥→` fill the left or right half of the screen. `⌃⌥↑` and
-  `⌃⌥↓` use the top or bottom half. `⌃⌥↩` maximizes the focused window and
-  `⌃⌥C` centers it without changing its size.
-- Right-click the menu-bar item → "Window" for half, quarter, maximize and
-  center commands. Quarter commands ship without shortcuts; bind them in
-  `config.json`.
+- `⌃Space` toggles the palette from any app.
+- `⌃⇧Space` opens the palette with snippets only.
+- `⌃⌥` plus an arrow fills that half of the screen, `⌃⌥↩` maximizes and
+  `⌃⌥C` centers the focused window. All shortcuts are configurable; see
+  [docs/keymaps.md](docs/keymaps.md).
 - Click the menu-bar item to toggle the full palette.
 - Right-click the menu-bar item for "Open Palette", "Open Snippets",
   "Window", "Edit Config…", "Permissions…" and "Quit Heycast".
@@ -36,27 +31,16 @@ from Launchpad or Finder.
 
 ## Search
 
-The palette indexes `.app` bundles under `/Applications`,
-`/System/Applications` and `~/Applications`, including symlinked bundles such
-as Safari, alongside the snippets folder (see [Snippets](#snippets)). The app
-scan runs in the background the first time the palette opens.
-
-- Type to filter by name: exact, prefix, acronym, word-prefix, substring and
-  subsequence matches rank in that order; usage breaks ties inside a tier.
-- With no query, frequently and recently launched apps come first, then the
-  rest alphabetically.
-- Launch counts and recency are kept locally in
-  `~/Library/Application Support/net.nilambar.heycast/usage.json`. Scores damp
-  raw counts logarithmically and halve every 30 days without a launch; history
-  is capped at the 200 most recently used apps.
-- The panel grows from one to seven visible rows, then scrolls.
-- Apps installed after Heycast starts appear the next time it is launched.
+Type to filter apps in `/Applications`, `/System/Applications` and
+`~/Applications`, plus snippets. Frequently and recently launched apps rank
+higher. Details: [docs/search.md](docs/search.md).
 
 ## Config
 
 All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
-`config.json` there is optional, read at launch and never written by the app;
-"Edit Config…" seeds a template and opens it in your default editor.
+`config.json` there is optional, read at launch and never written by the app; "Edit Config…" seeds a
+template and opens it in your default editor. Edits take effect on the next
+launch.
 
 ```json
 {
@@ -68,35 +52,9 @@ All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
 }
 ```
 
-- `keymaps` maps command names to global shortcuts. The built-in actions are
-  `palette` (the full apps-and-snippets palette), `snippets` (snippets only)
-  and the window commands `window.left`, `window.right`, `window.top`,
-  `window.bottom`, `window.topLeft`, `window.topRight`, `window.bottomLeft`,
-  `window.bottomRight`, `window.maximize` and `window.center`. Unknown names
-  are logged and ignored.
-- Window defaults are `ctrl+alt+left`, `ctrl+alt+right`, `ctrl+alt+up`,
-  `ctrl+alt+down`, `ctrl+alt+return` and `ctrl+alt+c`. Quarter commands are
-  unbound by default; add e.g. `"window.topLeft": "ctrl+alt+1"` to enable one.
-- Join modifiers and one key with `+`, for example `cmd+shift+k`, `alt+space`
-  or `ctrl+f1`. Modifiers are `ctrl`/`control`, `alt`/`opt`/`option`,
-  `cmd`/`command` and `shift`; at least one of control, option or command is
-  required. Keys are letters, digits, `space`, `return`, `tab`, `escape`,
-  arrows, `home`, `end`, `pageup`, `pagedown`, punctuation marks and
-  `f1`…`f20` (`delete`, `backspace` and `forwarddelete` included).
-- Missing actions use their built-in defaults: `palette`, `snippets` and the
-  six bound window commands. Set a value to `""` to disable that action.
-- An invalid shortcut is logged and falls back to the action's default. A
-  duplicate shortcut is logged and the first action wins (`palette`, then
-  `snippets`, then the window commands in the order listed above).
-  Registration can also fail when another app or a system shortcut owns the
-  combination; that is logged too.
-- The snippets folder defaults to `snippets/` beside `usage.json`; a configured
-  path replaces it entirely and is created if missing.
-- `~` expands to your home directory; relative paths resolve against the config
-  file's own directory.
-- A path that cannot be created is logged and ignored in favour of the default.
-- Edits take effect on the next launch.
-- A symlinked `snippets/` folder works too.
+- `keymaps`: global shortcuts. See [docs/keymaps.md](docs/keymaps.md).
+- `snippetsDirectory`: snippets folder. See
+  [docs/snippets.md](docs/snippets.md#location).
 
 ## Snippets
 
@@ -116,22 +74,13 @@ Nilambar Sharma
 
 ## Permissions
 
-Heycast asks for one grant: **Accessibility**, used for inline snippet
-expansion, for pasting snippets into the app in front by typing ⌘V for you, and
-for moving or resizing the focused window of another app.
-The first-run wizard explains it, shows the real system state, raises the
-consent prompt and links to the matching System Settings pane. Reopen it any
-time from "Permissions…".
+Heycast asks for one grant: **Accessibility**. It powers inline snippet
+expansion, snippet pasting (Heycast types ⌘V for you) and moving or resizing
+other apps' windows. Global hotkeys need no grant. The first-run wizard walks
+through it; reopen it from "Permissions…".
 
-The global hotkeys (`⌃Space`, `⌃⇧Space` and the window shortcuts by default)
-need no grant. Window commands and snippet pasting need Accessibility because
-they ask another app to move, resize, or receive input. Heycast does not ask for
-Microphone, Speech Recognition, Input Monitoring, Screen Recording or Full Disk
-Access, and does not read your screen or protected files.
-
-If no consent prompt appears, the standard cause is running an app from
-outside `/Applications`; move Heycast into `/Applications` and reopen it. Build
-and signing caveats live in [CONTRIBUTING.md](CONTRIBUTING.md).
+No consent prompt? Move Heycast into `/Applications` and reopen it. Build and
+signing caveats live in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

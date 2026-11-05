@@ -15,8 +15,11 @@ Nilambar
 ## Location
 
 - Default: `snippets/` beside `usage.json`.
-- Override with `snippetsDirectory` in the config. `~` expands; a symlinked
-  folder works.
+- Override with `snippetsDirectory` in the config. The path replaces the
+  default entirely and is created if missing. `~` expands; a relative path
+  resolves against the config file's directory; a symlinked folder works.
+- A path that cannot be created is logged and ignored in favour of the default.
+- Changing `snippetsDirectory` takes effect on the next launch.
 - Flat folder: only top-level `.md` files load. Hidden files are ignored.
 - Edits apply on the next palette open or folder change. No restart needed.
 
