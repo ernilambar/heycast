@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let config = AppConfig.load()
         installStatusItem()
+        palette.onAccessibilityMissing = { [weak self] in self?.permissions.show() }
         installKeymap(config.resolvedKeymap())
         let snippetsDirectory = logSnippetsDirectory(config)
         snippetExpander = SnippetExpander(directory: snippetsDirectory) { [weak self] in

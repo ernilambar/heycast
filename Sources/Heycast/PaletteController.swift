@@ -21,6 +21,13 @@ final class PaletteController: NSObject, NSWindowDelegate {
     /// opening the palette activates Heycast.
     private var previousApplication: NSRunningApplication?
     private var activeScope: PaletteScope = .all
+    /// Pending wait for the paste target to come forward; replaced by a newer paste.
+    private var activationObserver: NSObjectProtocol?
+    private var activationTimeout: DispatchWorkItem?
+
+    /// Called when a paste is blocked because Accessibility is not granted,
+    /// so the owner can send the user to the permission wizard.
+    var onAccessibilityMissing: (() -> Void)?
 
     override init() {
         let size = NSSize(
@@ -153,17 +160,68 @@ final class PaletteController: NSObject, NSWindowDelegate {
                 "Heycast: copied snippet “%@” to the clipboard; Accessibility is needed to paste it",
                 snippet.keyword
             )
+            onAccessibilityMissing?()
             return
         }
 
-        let target = previousApplication
-        target?.activate(from: .current)
+        guard let target = previousApplication, !target.isTerminated else {
+            NSLog("Heycast: copied snippet “%@” to the clipboard; no app to paste into", snippet.keyword)
+            return
+        }
 
-        // The target needs a moment to become key again; posting the keystroke
-        // immediately would send it to Heycast or to the outgoing window.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        whenActive(target) {
             SyntheticKeyboard.postPaste()
         }
+        target.activate(from: .current)
+    }
+
+    /// Runs `action` once `app` is frontmost, instead of guessing how long
+    /// activation takes. Gives up after a timeout rather than typing ⌘V into
+    /// whichever app happens to be in front; the text stays on the clipboard.
+    private func whenActive(_ app: NSRunningApplication, perform action: @escaping @MainActor @Sendable () -> Void) {
+        cancelPendingActivation()
+
+        // A short settle lets the target's key window take focus after the
+        // app itself becomes active.
+        let fire: @MainActor @Sendable () -> Void = { [weak self] in
+            self?.cancelPendingActivation()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                MainActor.assumeIsolated { action() }
+            }
+        }
+
+        if app.isActive {
+            fire()
+            return
+        }
+
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            let activated = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            guard activated?.processIdentifier == app.processIdentifier else { return }
+            MainActor.assumeIsolated { fire() }
+        }
+
+        let timeout = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                NSLog("Heycast: %@ did not come forward; snippet left on the clipboard", app.localizedName ?? "target app")
+                self?.cancelPendingActivation()
+            }
+        }
+        activationTimeout = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: timeout)
+    }
+
+    private func cancelPendingActivation() {
+        if let activationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
+            self.activationObserver = nil
+        }
+        activationTimeout?.cancel()
+        activationTimeout = nil
     }
 
     // MARK: - Keyboard
