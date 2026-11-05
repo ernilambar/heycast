@@ -29,7 +29,10 @@ struct Snippet: Identifiable, Hashable, Sendable {
 ///     Nilambar
 ///
 /// Files without front matter, without a keyword, or with an empty body are
-/// skipped: there is nothing to match or paste.
+/// skipped: there is nothing to match or paste. The body is everything after
+/// the closing `---` line, kept exactly as written (leading blank lines and
+/// the trailing newline included), so a snippet pastes the same text in every
+/// editor that authored it.
 enum SnippetLibrary {
     static let fileExtension = "md"
 
@@ -98,10 +101,8 @@ enum SnippetLibrary {
 
         guard let keyword = fields["keyword"], !keyword.isEmpty else { return nil }
 
-        let body = lines[(closing + 1)...]
-            .joined(separator: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return nil }
+        let body = lines[(closing + 1)...].joined(separator: "\n")
+        guard !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
 
         let name = fields["name"].flatMap { $0.isEmpty ? nil : $0 } ?? keyword
         return Snippet(keyword: keyword, name: name, body: body, url: url)

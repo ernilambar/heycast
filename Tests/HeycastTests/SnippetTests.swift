@@ -30,7 +30,7 @@ private let fileURL = URL(fileURLWithPath: "/tmp/example.md")
 
         #expect(snippet?.keyword == ";sig")
         #expect(snippet?.name == "Email signature")
-        #expect(snippet?.body == "Best regards,\nNilambar")
+        #expect(snippet?.body == "\nBest regards,\nNilambar\n")
     }
 
     @Test func nameFallsBackToKeyword() {
@@ -72,7 +72,16 @@ private let fileURL = URL(fileURLWithPath: "/tmp/example.md")
         )
 
         #expect(snippet?.keyword == ";sig")
-        #expect(snippet?.body == "Body")
+        #expect(snippet?.body == "\nBody\n")
+    }
+
+    @Test func bodyIsPreservedVerbatim() {
+        let snippet = SnippetLibrary.parse(
+            "---\nkeyword: ;code\n---\n\n\tindented();\n  trailing  \n\n",
+            url: fileURL
+        )
+
+        #expect(snippet?.body == "\n\tindented();\n  trailing  \n\n")
     }
 
     @Test func filesWithoutFrontMatterAreSkipped() {
@@ -104,6 +113,12 @@ private let fileURL = URL(fileURLWithPath: "/tmp/example.md")
                 """,
                 url: fileURL
             ) == nil
+        )
+    }
+
+    @Test func whitespaceOnlyBodyIsSkipped() {
+        #expect(
+            SnippetLibrary.parse("---\nkeyword: ;blank\n---\n\n  \n", url: fileURL) == nil
         )
     }
 

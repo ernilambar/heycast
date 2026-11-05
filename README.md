@@ -108,6 +108,9 @@ Nilambar
   stealing the longer trigger.
 - Files are re-read every time the palette opens and when the snippets folder
   changes, so an edit shows up without restarting.
+- The body is everything after the closing `---` line, pasted exactly as
+  written: leading blank lines and the final newline included. Only
+  whitespace-only bodies are treated as empty.
 - The snippets shortcut opens the same panel with applications filtered out;
   typing still searches snippets by keyword and name.
 - Files without front matter, without a keyword, or with an empty body are
