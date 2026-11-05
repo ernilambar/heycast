@@ -10,14 +10,19 @@ import Carbon.HIToolbox
 @MainActor
 final class HotKeyController {
     private static let signature: OSType = 0x4845_5943 // 'HEYC'
-    private static let identifier: UInt32 = 1
+    private static var nextIdentifier: UInt32 = 1
 
+    /// Every controller installs its own handler on the application target,
+    /// so each one sees every hotkey press; the ID tells them apart.
+    fileprivate let identifier: UInt32
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
     private let action: () -> Void
 
     init(hotKey: HotKey = .default, action: @escaping () -> Void) {
         self.action = action
+        identifier = Self.nextIdentifier
+        Self.nextIdentifier += 1
         install()
         register(hotKey: hotKey)
     }
@@ -45,7 +50,7 @@ final class HotKeyController {
     }
 
     private func register(hotKey: HotKey) {
-        let hotKeyID = EventHotKeyID(signature: Self.signature, id: Self.identifier)
+        let hotKeyID = EventHotKeyID(signature: Self.signature, id: identifier)
         let status = RegisterEventHotKey(
             hotKey.keyCode,
             hotKey.modifiers,
@@ -71,8 +76,24 @@ private func hotKeyEventHandler(
     _ event: EventRef?,
     _ userData: UnsafeMutableRawPointer?
 ) -> OSStatus {
-    guard let userData else { return OSStatus(eventNotHandledErr) }
+    guard let userData, let event else { return OSStatus(eventNotHandledErr) }
     let controller = Unmanaged<HotKeyController>.fromOpaque(userData).takeUnretainedValue()
+
+    var hotKeyID = EventHotKeyID()
+    let status = GetEventParameter(
+        event,
+        EventParamName(kEventParamDirectObject),
+        EventParamType(typeEventHotKeyID),
+        nil,
+        MemoryLayout<EventHotKeyID>.size,
+        nil,
+        &hotKeyID
+    )
+    // Not ours: pass it on so the controller that registered it can run.
+    guard status == noErr,
+          hotKeyID.id == MainActor.assumeIsolated({ controller.identifier })
+    else { return OSStatus(eventNotHandledErr) }
+
     MainActor.assumeIsolated { controller.perform() }
     return noErr
 }
