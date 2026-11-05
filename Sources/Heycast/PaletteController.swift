@@ -21,6 +21,7 @@ final class PaletteController: NSObject, NSWindowDelegate {
     /// The app to hand focus back to when a snippet is pasted, captured before
     /// opening the palette activates Heycast.
     private var previousApplication: NSRunningApplication?
+    private var activeScope: PaletteScope = .all
 
     override init() {
         let size = NSSize(
@@ -70,16 +71,21 @@ final class PaletteController: NSObject, NSWindowDelegate {
 
     var isVisible: Bool { panel.isVisible }
 
-    func toggle() {
-        isVisible ? hide() : show()
+    func toggle(scope: PaletteScope = .all) {
+        if isVisible, activeScope == scope {
+            hide()
+        } else {
+            show(scope: scope)
+        }
     }
 
-    func show() {
+    func show(scope: PaletteScope = .all) {
         let frontmost = NSWorkspace.shared.frontmostApplication
         if frontmost?.bundleIdentifier != Bundle.main.bundleIdentifier {
             previousApplication = frontmost
         }
-        model.reset()
+        activeScope = scope
+        model.reset(scope: scope)
         moveToActiveScreen()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate()

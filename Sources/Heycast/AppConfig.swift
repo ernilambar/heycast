@@ -5,12 +5,74 @@ import Foundation
 /// Heycast reads this file at startup and never writes it; the status-bar menu
 /// seeds a template the first time you open it.
 struct AppConfig: Decodable {
+    /// Global shortcuts keyed by action name, e.g.
+    /// `{"palette": "ctrl+space", "snippets": "ctrl+shift+space"}`.
+    /// An empty value disables an action. Unknown actions are logged and
+    /// ignored; missing actions keep their built-in default.
+    var keymaps: [String: String]?
+
     /// Path to the snippets folder. `~` expands to the home directory and
     /// relative paths resolve against the config file's own directory.
     var snippetsDirectory: String?
 }
 
 extension AppConfig {
+    /// Resolves every known action, rejecting malformed and duplicate
+    /// shortcuts so one command cannot silently replace another.
+    func resolvedKeymap() -> Keymap {
+        var shortcuts: [KeymapAction: HotKey] = [:]
+        var owners: [HotKey: KeymapAction] = [:]
+
+        for action in KeymapAction.allCases {
+            guard let hotKey = resolvedShortcut(
+                for: action,
+                configured: keymaps?[action.rawValue]
+            ) else { continue }
+
+            if let owner = owners[hotKey] {
+                NSLog(
+                    "Heycast: keymap %@ duplicates %@ (%@); ignoring %@",
+                    action.rawValue,
+                    owner.rawValue,
+                    hotKey.displayString,
+                    action.rawValue
+                )
+                continue
+            }
+
+            owners[hotKey] = action
+            shortcuts[action] = hotKey
+        }
+
+        for key in (keymaps ?? [:]).keys where KeymapAction(rawValue: key) == nil {
+            NSLog("Heycast: unknown keymap action \"%@\" in config.json", key)
+        }
+
+        return Keymap(shortcuts: shortcuts)
+    }
+
+    private func resolvedShortcut(
+        for action: KeymapAction,
+        configured: String?
+    ) -> HotKey? {
+        guard let configured else { return action.defaultShortcut }
+
+        let value = configured.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return nil }
+
+        guard let parsed = HotKey.parse(value) else {
+            let fallback = action.defaultShortcut?.displayString ?? "disabled"
+            NSLog(
+                "Heycast: invalid keymap %@ \"%@\" in config.json, using %@",
+                action.rawValue,
+                value,
+                fallback
+            )
+            return action.defaultShortcut
+        }
+        return parsed
+    }
+
     static func load(from url: URL = SupportDirectory.configFile) -> AppConfig {
         guard FileManager.default.fileExists(atPath: url.path) else { return AppConfig() }
         do {
@@ -73,7 +135,7 @@ extension AppConfig {
         return url
     }
 
-    /// `_comment` is ignored by the decoder; it documents the only real key in
+    /// `_comment` is ignored by the decoder; it documents the real keys in
     /// the file a user will see first.
     private static func template() throws -> Data {
         let snippets = SupportDirectory.defaultSnippets.path
@@ -84,10 +146,16 @@ extension AppConfig {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return try encoder.encode([
-            "_comment": "Set snippetsDirectory to keep snippets outside this folder. Restart Heycast after editing.",
-            "snippetsDirectory": displayPath,
-        ])
+        return try encoder.encode(
+            ConfigTemplate(
+                comment: "Bind commands under keymaps by action name; an empty string disables one. snippetsDirectory is optional. Restart Heycast after editing.",
+                keymaps: [
+                    "palette": "ctrl+space",
+                    "snippets": "ctrl+shift+space",
+                ],
+                snippetsDirectory: displayPath
+            )
+        )
     }
 
     private static func resolve(_ path: String, relativeTo base: URL) -> URL {
@@ -96,5 +164,18 @@ extension AppConfig {
             return URL(fileURLWithPath: expanded, isDirectory: true).standardizedFileURL
         }
         return base.appendingPathComponent(expanded, isDirectory: true).standardizedFileURL
+    }
+}
+
+/// Shape of the seeded `config.json`. `_comment` is ignored by the decoder.
+private struct ConfigTemplate: Encodable {
+    let comment: String
+    let keymaps: [String: String]
+    let snippetsDirectory: String
+
+    enum CodingKeys: String, CodingKey {
+        case comment = "_comment"
+        case keymaps
+        case snippetsDirectory
     }
 }

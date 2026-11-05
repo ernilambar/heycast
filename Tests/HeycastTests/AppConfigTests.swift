@@ -13,17 +13,26 @@ private func temporaryDirectory() throws -> URL {
 @Suite struct AppConfigTests {
     @Test func missingFileHasNoSettings() {
         let missing = URL(fileURLWithPath: "/nonexistent-heycast/config.json")
-        #expect(AppConfig.load(from: missing).snippetsDirectory == nil)
+        let config = AppConfig.load(from: missing)
+        #expect(config.snippetsDirectory == nil)
+        #expect(config.keymaps == nil)
+        #expect(config.resolvedKeymap() == .default)
     }
 
-    @Test func readsOnlyTheKnownKey() throws {
+    @Test func readsOnlyTheKnownKeys() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let file = directory.appendingPathComponent("config.json")
-        try #"{"snippetsDirectory":"/tmp/snippets","unrelated":true}"#
+        try #"{"keymaps":{"palette":"cmd+shift+k","snippets":"alt+s"},"snippetsDirectory":"/tmp/snippets","unrelated":true}"#
             .write(to: file, atomically: true, encoding: .utf8)
-        #expect(AppConfig.load(from: file).snippetsDirectory == "/tmp/snippets")
+
+        let config = AppConfig.load(from: file)
+        let keymap = config.resolvedKeymap()
+        #expect(config.snippetsDirectory == "/tmp/snippets")
+        #expect(config.keymaps == ["palette": "cmd+shift+k", "snippets": "alt+s"])
+        #expect(keymap[.palette]?.keyName == "K")
+        #expect(keymap[.snippets]?.keyName == "S")
     }
 
     @Test func unreadableFileFallsBackToDefaults() throws {
@@ -32,7 +41,10 @@ private func temporaryDirectory() throws -> URL {
 
         let file = directory.appendingPathComponent("config.json")
         try #"{"#.write(to: file, atomically: true, encoding: .utf8)
-        #expect(AppConfig.load(from: file).snippetsDirectory == nil)
+        let config = AppConfig.load(from: file)
+        #expect(config.snippetsDirectory == nil)
+        #expect(config.keymaps == nil)
+        #expect(config.resolvedKeymap() == .default)
     }
 
     @Test func absolutePathIsCreated() throws {
@@ -67,7 +79,10 @@ private func temporaryDirectory() throws -> URL {
 
         let file = directory.appendingPathComponent("config.json")
         #expect(try AppConfig.prepareForEditing(at: file) == file)
-        #expect(AppConfig.load(from: file).snippetsDirectory != nil)
+        let seeded = AppConfig.load(from: file)
+        #expect(seeded.snippetsDirectory != nil)
+        #expect(seeded.keymaps == ["palette": "ctrl+space", "snippets": "ctrl+shift+space"])
+        #expect(seeded.resolvedKeymap() == .default)
         #expect(try String(contentsOf: file, encoding: .utf8).contains("_comment"))
 
         try #"{"snippetsDirectory":"custom"}"#

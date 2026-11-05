@@ -9,9 +9,6 @@ import Carbon.HIToolbox
 /// of a launcher shortcut.
 @MainActor
 final class HotKeyController {
-    static let defaultKeyCode = UInt32(kVK_Space)
-    static let defaultModifiers = UInt32(optionKey)
-
     private static let signature: OSType = 0x4845_5943 // 'HEYC'
     private static let identifier: UInt32 = 1
 
@@ -19,21 +16,17 @@ final class HotKeyController {
     private var handlerRef: EventHandlerRef?
     private let action: () -> Void
 
-    init(
-        keyCode: UInt32 = HotKeyController.defaultKeyCode,
-        modifiers: UInt32 = HotKeyController.defaultModifiers,
-        action: @escaping () -> Void
-    ) {
+    init(hotKey: HotKey = .default, action: @escaping () -> Void) {
         self.action = action
-        install(keyCode: keyCode, modifiers: modifiers)
-        register(keyCode: keyCode, modifiers: modifiers)
+        install()
+        register(hotKey: hotKey)
     }
 
     fileprivate func perform() {
         action()
     }
 
-    private func install(keyCode: UInt32, modifiers: UInt32) {
+    private func install() {
         var eventType = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
             eventKind: UInt32(kEventHotKeyPressed)
@@ -51,18 +44,21 @@ final class HotKeyController {
         }
     }
 
-    private func register(keyCode: UInt32, modifiers: UInt32) {
+    private func register(hotKey: HotKey) {
         let hotKeyID = EventHotKeyID(signature: Self.signature, id: Self.identifier)
         let status = RegisterEventHotKey(
-            keyCode,
-            modifiers,
+            hotKey.keyCode,
+            hotKey.modifiers,
             hotKeyID,
             GetApplicationEventTarget(),
             0,
             &hotKeyRef
         )
         if status != noErr {
-            NSLog("Heycast: ⌥Space is unavailable, another app holds it (\(status))")
+            NSLog(
+                "Heycast: %@ is unavailable, another app or system shortcut holds it (\(status))",
+                hotKey.displayString
+            )
         }
     }
 }

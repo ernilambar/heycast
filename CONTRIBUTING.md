@@ -25,7 +25,8 @@ Both scripts build only `darwin/arm64` and refuse to run on other hosts.
 
 The app is an accessory (`LSUIElement`) app: no Dock icon, one status-bar item.
 SwiftUI content is hosted in a borderless floating `NSPanel` that toggles from
-the status-bar item, the `⌥Space` hotkey or the menu-bar menu.
+the status-bar item, the palette hotkey (`⌃Space`), the snippets-only hotkey
+(`⌃⇧Space`) or the menu-bar menu.
 
 ## Panel
 
@@ -34,13 +35,49 @@ tall depending on the result count, centered on the screen under the pointer
 with its top edge offset 20% from the top. It is `nonactivatingPanel` +
 `canBecomeKey`, so it can take keyboard focus from the launcher.
 
+## Keymaps
+
+Global shortcuts are declared by `KeymapAction` in `Keymap.swift`, which owns
+the action name used in `config.json`, its optional default shortcut and its
+menu title. `AppConfig.resolvedKeymap()` resolves configured bindings, rejects
+invalid and duplicate combinations, and yields the `Keymap` that
+`AppDelegate` registers through one `HotKeyController` per action.
+
+To add a command (window management, for example): add a `KeymapAction` case,
+give it a `defaultShortcut` or leave it `nil` to require an explicit bind, set
+a `menuTitle` if it belongs in the status-bar menu, and handle it in
+`AppDelegate.perform(_:toggling:)`. The config shape does not change.
+
+Action names stay flat strings. Group related commands with a dot namespace
+rather than nesting objects, so resolution remains a single
+`[String: String]` pass:
+
+```json
+{
+  "keymaps": {
+    "palette": "ctrl+space",
+    "snippets": "ctrl+shift+space",
+    "window.left": "ctrl+alt+left",
+    "window.right": "ctrl+alt+right",
+    "window.top": "ctrl+alt+up",
+    "window.bottom": "ctrl+alt+down",
+    "window.maximize": "ctrl+alt+return",
+    "window.center": "ctrl+alt+c"
+  }
+}
+```
+
+Give new commands `defaultShortcut: nil` until their defaults are safe to
+claim globally; an unbound action stays disabled and does not register a
+hotkey.
+
 ## Permissions while developing
 
 The app needs one grant today: **Accessibility**, used by snippets to type ⌘V
 into the app in front after the palette copies the snippet body.
 
-- The `⌥Space` hotkey needs no grant: Carbon `RegisterEventHotKey` is
-  delivered by the window server.
+- The global hotkeys need no grant: Carbon `RegisterEventHotKey` is delivered
+  by the window server.
 - Microphone and Speech Recognition are not asked for because no audio exists.
   Add them with the voice feature — and Speech only if transcription uses
   Apple's `SFSpeechRecognizer` rather than a remote model.
@@ -68,14 +105,16 @@ Sources/Heycast/
   HeycastApp.swift       @main entry, accessory activation policy
   AppDelegate.swift      status-bar item, config menu, panel lifecycle
   SupportDirectory.swift Application Support namespace, file locations
-  AppConfig.swift        config.json loading and snippets path resolution
+  AppConfig.swift        config.json loading, keymap resolution, snippets path
+  Keymap.swift           keymap actions, defaults, resolved shortcut map
+  HotKey.swift           hotkey parsing, display and menu key equivalent
   PaletteController.swift NSPanel configuration, placement, resize, launching
-  PaletteView.swift      SwiftUI palette content, results list + model
+  PaletteView.swift      SwiftUI palette content, scope, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking
   Snippet.swift          snippet front matter, folder loading
   PaletteSearch.swift    merged app + snippet ranking for the palette
   UsageStore.swift       persisted launch counts and recency, usage scoring
-  HotKeyController.swift global ⌥Space via Carbon RegisterEventHotKey
+  HotKeyController.swift global hotkeys via Carbon RegisterEventHotKey
   Permission.swift       TCC permissions: status checks, requests, panes
   PermissionWizardModel.swift  wizard steps, refresh on app activation
   PermissionWizardView.swift   wizard pages + summary
@@ -93,8 +132,9 @@ Tests/HeycastTests/      Swift Testing suites for the pure logic
 
 `make test` runs the Swift Testing suites in `Tests/HeycastTests/`: search
 ranking, snippet parsing and merged palette ranking, usage scoring and
-persistence, config path resolution, and launch history pruning. These cover the pure logic; the palette, panel, hotkey and
-TCC code are not unit-tested because they need real UI/system state.
+persistence, config path resolution and keymap resolution, and launch history
+pruning. These cover the pure logic; the panel, hotkey registration and TCC
+code are not unit-tested because they need real UI/system state.
 
 The test target depends on the executable target and imports it with
 `@testable`, so the app needs no separate library target. Swift Testing ships

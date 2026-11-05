@@ -1,8 +1,8 @@
 # heycast
 
-A macOS launcher palette. Press `⌥Space` anywhere, type a few letters, hit
-`↩`, and the app you meant opens. Heycast lives in the menu bar — no Dock icon,
-no window to manage.
+A macOS launcher palette. Press `⌃Space` anywhere, type a few letters, hit
+`↩`, and the app you meant opens. Press `⌃⇧Space` to search snippets only.
+Heycast lives in the menu bar — no Dock icon, no window to manage.
 
 ## Install
 
@@ -14,10 +14,13 @@ from Launchpad or Finder.
 
 ## Use
 
-- `⌥Space` toggles the palette from any app.
-- Click the menu-bar item to toggle it.
-- Right-click the menu-bar item for "Open Palette", "Edit Config…",
-  "Permissions…" and "Quit Heycast".
+- `⌃Space` toggles the palette from any app. Change it with
+  `keymaps.palette` in `config.json`.
+- `⌃⇧Space` opens the palette with snippets only. Change it with
+  `keymaps.snippets`.
+- Click the menu-bar item to toggle the full palette.
+- Right-click the menu-bar item for "Open Palette", "Open Snippets",
+  "Edit Config…", "Permissions…" and "Quit Heycast".
 - `↑`/`↓` moves the selection, `↩` launches the selected app or pastes the
   selected snippet, clicking a row does the same, `esc` or focusing another app
   closes the palette.
@@ -48,10 +51,30 @@ All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
 
 ```json
 {
+  "keymaps": {
+    "palette": "ctrl+space",
+    "snippets": "ctrl+shift+space"
+  },
   "snippetsDirectory": "~/Documents/heycast-snippets"
 }
 ```
 
+- `keymaps` maps command names to global shortcuts. The built-in actions are
+  `palette` (the full apps-and-snippets palette) and `snippets` (snippets
+  only). Future actions such as window management use the same object; unknown
+  names are logged and ignored.
+- Join modifiers and one key with `+`, for example `cmd+shift+k`, `alt+space`
+  or `ctrl+f1`. Modifiers are `ctrl`/`control`, `alt`/`opt`/`option`,
+  `cmd`/`command` and `shift`; at least one of control, option or command is
+  required. Keys are letters, digits, `space`, `return`, `tab`, `escape`,
+  arrows, `home`, `end`, `pageup`, `pagedown`, punctuation marks and
+  `f1`…`f20` (`delete`, `backspace` and `forwarddelete` included).
+- Missing actions use their built-in default: `palette` is `ctrl+space` and
+  `snippets` is `ctrl+shift+space`. Set a value to `""` to disable that action.
+- An invalid shortcut is logged and falls back to the action's default. A
+  duplicate shortcut is logged and the first action wins (`palette` before
+  `snippets`). Registration can also fail when another app or a system
+  shortcut owns the combination; that is logged too.
 - The snippets folder defaults to `snippets/` beside `usage.json`; a configured
   path replaces it entirely and is created if missing.
 - `~` expands to your home directory; relative paths resolve against the config
@@ -78,6 +101,8 @@ Nilambar
 - `keyword` is required and is what the palette matches on; `name` is optional
   and defaults to the keyword.
 - Files are re-read every time the palette opens, so an edit shows up at once.
+- The snippets shortcut opens the same panel with applications filtered out;
+  typing still searches snippets by keyword and name.
 - Files without front matter, without a keyword, or with an empty body are
   skipped and logged.
 - Snippets are found by keyword and by name with the same ranking as apps; with
@@ -93,9 +118,10 @@ the app in front by typing ⌘V for you. The first-run wizard explains it,
 shows the real system state, raises the consent prompt and links to the
 matching System Settings pane. Reopen it any time from "Permissions…".
 
-The `⌥Space` hotkey needs no grant. Heycast does not ask for Microphone,
-Speech Recognition, Input Monitoring, Screen Recording or Full Disk Access, and
-does not read your screen or protected files.
+The global hotkeys (`⌃Space` and `⌃⇧Space` by default) need no grant. Heycast
+does not ask for Microphone, Speech Recognition, Input Monitoring, Screen
+Recording or Full Disk Access, and does not read your screen or protected
+files.
 
 If no consent prompt appears, the standard cause is running an app from
 outside `/Applications`; move Heycast into `/Applications` and reopen it. Build

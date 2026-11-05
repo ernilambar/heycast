@@ -1,6 +1,19 @@
 import AppKit
 import SwiftUI
 
+/// What a palette opening searches: everything, or snippets only.
+enum PaletteScope: Equatable, Sendable {
+    case all
+    case snippets
+
+    var searchPrompt: String {
+        switch self {
+        case .all: "Search applications and snippets…"
+        case .snippets: "Search snippets…"
+        }
+    }
+}
+
 @MainActor
 final class PaletteModel: ObservableObject {
     @Published var query = "" {
@@ -12,6 +25,7 @@ final class PaletteModel: ObservableObject {
     @Published private(set) var results: [PaletteItem] = []
     @Published private(set) var selectionIndex = 0
     @Published private(set) var isLoading = false
+    @Published private(set) var scope: PaletteScope = .all
 
     private let usageStore: UsageStore
     private let snippetsDirectory: URL
@@ -32,7 +46,8 @@ final class PaletteModel: ObservableObject {
         results.indices.contains(selectionIndex) ? results[selectionIndex] : nil
     }
 
-    func reset() {
+    func reset(scope: PaletteScope = .all) {
+        self.scope = scope
         usage = usageStore.ranking()
         // Snippets are re-read on every open, so editing a file shows up
         // without restarting the app.
@@ -69,7 +84,7 @@ final class PaletteModel: ObservableObject {
 
     private func updateResults() {
         results = PaletteSearch.rank(
-            applications: applications,
+            applications: scope == .all ? applications : [],
             snippets: snippets,
             matching: query,
             usage: usage
@@ -106,7 +121,7 @@ struct PaletteView: View {
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                TextField("Search applications and snippets…", text: $model.query)
+                TextField(model.scope.searchPrompt, text: $model.query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 22))
                     .focused($isFocused)
@@ -141,7 +156,7 @@ struct PaletteView: View {
 
     private var resultList: some View {
         Group {
-            if model.isLoading {
+            if model.isLoading && model.scope == .all {
                 messageRow("Loading applications…", showsProgress: true)
             } else if model.results.isEmpty {
                 messageRow(emptyMessage, showsProgress: false)
@@ -209,7 +224,10 @@ struct PaletteView: View {
 
     private var emptyMessage: String {
         let trimmed = model.query.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Nothing to show." : "No results match “\(trimmed)”."
+        if trimmed.isEmpty {
+            return model.scope == .snippets ? "No snippets." : "Nothing to show."
+        }
+        return "No results match “\(trimmed)”."
     }
 
     private var resultCountText: String {

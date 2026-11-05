@@ -6,27 +6,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let palette = PaletteController()
     private let permissions = PermissionWizardController()
-    private var hotKey: HotKeyController?
+    private var hotKeyControllers: [KeymapAction: HotKeyController] = [:]
+    private var keymap = Keymap.default
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let config = AppConfig.load()
         installStatusItem()
-        installHotKey()
-        logSnippetsDirectory()
+        installKeymap(config.resolvedKeymap())
+        logSnippetsDirectory(config)
         showWizardOnFirstLaunch()
     }
 
-    /// Resolves `config.json` once per launch and creates the snippets folder,
-    /// so the menu and the palette cannot disagree on one path.
-    private func logSnippetsDirectory() {
-        let directory = AppConfig.load().snippetsDirectoryURL()
+    /// Resolves the snippets folder once per launch, so the menu and the
+    /// palette cannot disagree on one path.
+    private func logSnippetsDirectory(_ config: AppConfig) {
+        let directory = config.snippetsDirectoryURL()
         let count = SnippetLibrary.load(from: directory).count
         NSLog("Heycast: snippets directory: %@ (%d snippets)", directory.path, count)
     }
 
-    private func installHotKey() {
-        hotKey = HotKeyController { [weak self] in
-            self?.palette.toggle()
+    private func installKeymap(_ keymap: Keymap) {
+        self.keymap = keymap
+
+        for action in KeymapAction.allCases {
+            guard let hotKey = keymap[action] else {
+                NSLog("Heycast: keymap %@: disabled", action.rawValue)
+                continue
+            }
+
+            NSLog("Heycast: keymap %@: %@", action.rawValue, hotKey.displayString)
+            hotKeyControllers[action] = HotKeyController(hotKey: hotKey) { [weak self] in
+                self?.perform(action, toggling: true)
+            }
+        }
+    }
+
+    private func perform(_ action: KeymapAction, toggling: Bool) {
+        switch action {
+        case .palette:
+            if toggling {
+                palette.toggle(scope: .all)
+            } else {
+                palette.show(scope: .all)
+            }
+        case .snippets:
+            if toggling {
+                palette.toggle(scope: .snippets)
+            } else {
+                palette.show(scope: .snippets)
+            }
         }
     }
 
@@ -54,20 +83,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if NSApp.currentEvent?.type == .rightMouseUp {
             showMenu()
         } else {
-            palette.toggle()
+            perform(.palette, toggling: true)
         }
     }
 
     private func showMenu() {
         let menu = NSMenu()
 
-        let openPaletteItem = menu.addItem(
-            withTitle: "Open Palette",
-            action: #selector(openPalette),
-            keyEquivalent: " "
-        )
-        openPaletteItem.keyEquivalentModifierMask = [.option]
-        openPaletteItem.target = self
+        for action in KeymapAction.allCases {
+            guard let title = action.menuTitle else { continue }
+            let hotKey = keymap[action]
+            let item = menu.addItem(
+                withTitle: title,
+                action: #selector(menuActionSelected(_:)),
+                keyEquivalent: hotKey?.keyEquivalent ?? ""
+            )
+            item.keyEquivalentModifierMask = hotKey?.menuModifiers ?? []
+            item.representedObject = action.rawValue
+            item.target = self
+        }
 
         menu.addItem(
             withTitle: "Edit Config…",
@@ -91,8 +125,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.menu = nil
     }
 
-    @objc private func openPalette() {
-        palette.show()
+    @objc private func menuActionSelected(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let action = KeymapAction(rawValue: raw)
+        else { return }
+        perform(action, toggling: false)
     }
 
     @objc private func openPermissions() {
