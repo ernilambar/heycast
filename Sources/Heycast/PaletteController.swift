@@ -136,7 +136,9 @@ final class PaletteController: NSObject, NSWindowDelegate {
         NSWorkspace.shared.openApplication(
             at: app.url,
             configuration: configuration
-        ) { _, error in
+        ) { @Sendable _, error in
+            // LaunchServices calls this on a background queue; without
+            // @Sendable it inherits @MainActor and traps the isolation check.
             if let error {
                 NSLog("Heycast: could not open %@: %@", app.name, error.localizedDescription)
             } else {
