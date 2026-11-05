@@ -62,5 +62,6 @@ assemble_bundle() {
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
     cp "$root/.build/$config/$executable" "$app/Contents/MacOS/$executable"
     cp "$plist" "$app/Contents/Info.plist"
+    cp "$root/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
     codesign --force --sign "$sign_identity" "$app"
 }

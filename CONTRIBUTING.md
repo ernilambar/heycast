@@ -25,6 +25,9 @@ Both scripts build only `darwin/arm64` and refuse to run on other hosts.
 `./scripts/dev.sh --release` installs a release build the same way.
 
 The app is an accessory (`LSUIElement`) app: no Dock icon, one status-bar item.
+Its icon is the H monogram drawn as a template image (`StatusBarIcon.swift`), so
+the system tints it black or white for the current menu-bar appearance instead
+of showing the colored app icon.
 SwiftUI content is hosted in a borderless floating `NSPanel` that toggles from
 the status-bar item, the palette hotkey (`⌘Space`), the snippets-only hotkey
 (`⌥Space`) or the menu-bar menu.
@@ -103,6 +106,14 @@ snippet body.
 - `make reset-permissions` runs `tccutil reset All <bundle id>` and forgets
   the first-run flag.
 
+## Icon
+
+`Resources/AppIcon.svg` is the 1024x1024 source and `Resources/AppIcon.icns` is
+generated from it and committed, so a build needs no renderer.
+`CFBundleIconFile` in the plist names it and `assemble_bundle` copies it into
+`Contents/Resources`. After editing the SVG, run `./scripts/icon.sh` (
+`sips` rasterizes the SVG, `iconutil` packs every size) and rebuild.
+
 ## Releasing
 
 `Resources/Info.plist` owns the version: `CFBundleShortVersionString` is the
@@ -130,6 +141,7 @@ Sources/Heycast/
   AppConfig.swift        config.json loading, keymap resolution, snippets path
   Keymap.swift           keymap actions, defaults, resolved shortcut map
   HotKey.swift           hotkey parsing, display and menu key equivalent
+  StatusBarIcon.swift    template H mark for the menu-bar item
   PaletteController.swift NSPanel configuration, placement, resize, launching
   PaletteView.swift      SwiftUI palette content, scope, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking
@@ -144,6 +156,9 @@ Sources/Heycast/
   PermissionWizardView.swift   wizard pages + summary
   PermissionWizardController.swift  setup window lifecycle
 Resources/Info.plist     LSUIElement, bundle metadata, TCC usage strings
+Resources/AppIcon.svg    app icon source, 1024x1024
+Resources/AppIcon.icns   generated icon bundled as Contents/Resources/AppIcon.icns
+scripts/icon.sh          regenerate AppIcon.icns from AppIcon.svg
 scripts/lib.sh           plist metadata + bundle assembly, shared by the scripts
 scripts/dev.sh           debug/release build, install to /Applications, relaunch
 scripts/bundle.sh        release gate, bundle, zip archive, SHA256SUMS
