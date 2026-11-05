@@ -1,8 +1,8 @@
 # heycast
 
 A macOS palette app: SwiftUI content hosted in a borderless, floating
-`NSPanel`. This first cut is a hello world — a status-bar app that opens a
-launcher-style palette, focuses a text field, and reports back what you type.
+`NSPanel`. The status-bar app opens a launcher-style palette that searches
+installed applications and launches the selected one.
 
 ## Requirements
 
@@ -31,6 +31,21 @@ item. Click it to open the palette.
   no permission required)
 - right-click it for "Open Palette" / "Permissions…" / "Quit Heycast"
 - `esc` or focusing another app closes the palette
+
+## Applications
+
+The palette indexes `.app` bundles under `/Applications`, `/System/Applications`
+and `~/Applications`, including symlinked bundles such as Safari. The scan runs
+in the background the first time the palette opens and is cached for the rest
+of the process.
+
+- type to filter by name; exact, prefix, word-prefix, acronym, substring and
+  subsequence matches rank in that order
+- `↑`/`↓` moves the selection, `↩` launches it
+- clicking a row launches that app
+- the panel grows from one to seven visible rows, then scrolls
+
+Apps installed after Heycast starts show up the next time it is launched.
 
 ## Permissions
 
@@ -67,8 +82,9 @@ matching System Settings pane; reopen it any time from "Permissions…".
 Sources/Heycast/
   HeycastApp.swift       @main entry, accessory activation policy
   AppDelegate.swift      status-bar item + panel lifecycle
-  PaletteController.swift NSPanel configuration, placement, esc/click-away
-  PaletteView.swift      SwiftUI palette content + model
+  PaletteController.swift NSPanel configuration, placement, resize, launching
+  PaletteView.swift      SwiftUI palette content, results list + model
+  ApplicationCatalog.swift  installed app scan and match ranking
   HotKeyController.swift global ⌥Space via Carbon RegisterEventHotKey
   Permission.swift       TCC permissions: status checks, requests, panes
   PermissionWizardModel.swift  wizard steps, refresh on app activation
@@ -81,13 +97,15 @@ scripts/bundle.sh        release gate, bundle, zip archive, SHA256SUMS
 Makefile                 thin wrappers around the scripts
 ```
 
-The panel is transparent and borderless, sized 620×132, centered on the
-screen under the pointer and offset 20% from the top. It is
-`nonactivatingPanel` + `canBecomeKey`, so it can take keyboard focus from the
-launcher.
+The panel is transparent and borderless, 620 points wide and 157–385 points
+tall depending on the result count, centered on the screen under the pointer
+with its top edge offset 20% from the top. It is `nonactivatingPanel` +
+`canBecomeKey`, so it can take keyboard focus from the launcher.
 
 ## Next
 
 - Snippets: keyword storage, keystroke matching and in-place expansion, all
   under the Accessibility grant
-- Real command execution and results list
+- More result sources: windows, files, system settings and commands alongside
+  applications
+- Usage-based ranking that remembers frequently launched apps
