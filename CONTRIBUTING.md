@@ -121,15 +121,15 @@ release version and `CFBundleVersion` its build number. Nothing else stores it,
 so a bump is a single-file change.
 
 1. Bump both keys in `Resources/Info.plist`.
-2. Add a `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md`.
-3. Run `make test && make bundle` and check `dist/` by hand.
-4. Commit, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main vX.Y.Z`.
+2. Run `make test && make bundle` and check `dist/` by hand.
+3. Commit, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main vX.Y.Z`.
 
 Pushing the tag runs `.github/workflows/release.yml`. It rejects a tag whose
 version differs from the plist, runs the tests, builds the bundle, and
 publishes `Heycast-macos-arm64.zip` and `SHA256SUMS` on the GitHub release,
-using that `CHANGELOG.md` section as the release notes. The tag carries a `v`
-prefix; the plist keeps the bare version.
+with notes generated from the commits and merged pull requests since the
+previous tag. The tag carries a `v` prefix; the plist keeps the bare version.
+The release title is `CFBundleName` plus the tag, e.g. `Heycast v0.1.0`.
 
 ## Layout
 
@@ -168,7 +168,6 @@ Makefile                 thin wrappers around the scripts
 Tests/HeycastTests/      Swift Testing suites for the pure logic
 .github/workflows/ci.yml test workflow, macOS runner
 .github/workflows/release.yml  tag-triggered release, publishes the bundle
-CHANGELOG.md             release notes, one section per version
 LICENSE                  MIT
 ```
 

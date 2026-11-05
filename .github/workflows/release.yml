@@ -30,25 +30,13 @@ jobs:
       - name: Build release artifacts
         run: make bundle
 
-      - name: Extract release notes
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v version="$version" '
-            index($0, "## [" version "]") == 1 { found = 1; next }
-            found && /^## / { exit }
-            found
-          ' CHANGELOG.md > release-notes.md
-          if [ ! -s release-notes.md ]; then
-            echo "::error::CHANGELOG.md has no section for $version"
-            exit 1
-          fi
-
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          app_name="$(plutil -extract CFBundleName raw -o - Resources/Info.plist)"
           gh release create "$GITHUB_REF_NAME" \
             dist/Heycast-macos-arm64.zip \
             dist/SHA256SUMS \
-            --title "$GITHUB_REF_NAME" \
-            --notes-file release-notes.md
+            --title "$app_name $GITHUB_REF_NAME" \
+            --generate-notes
