@@ -12,9 +12,10 @@ launcher-style palette, focuses a text field, and reports back what you type.
 ## Build & run
 
 ```sh
-make run     # debug build, install to /Applications, launch
-make bundle  # release .app, -macos-arm64.zip and SHA256SUMS under dist/
-make stop    # quit a running instance
+make run               # debug build, install to /Applications, launch
+make bundle            # release .app, -macos-arm64.zip and SHA256SUMS under dist/
+make stop              # quit a running instance
+make reset-permissions # clear TCC answers + the first-run flag
 make clean
 ```
 
@@ -26,8 +27,39 @@ The app is an accessory (`LSUIElement`) app: no Dock icon, one status-bar
 item. Click it to open the palette.
 
 - left-click the status-bar item to toggle it
-- right-click it for "Open Palette" / "Quit Heycast"
+- `⌥Space` toggles it globally, from any app (Carbon `RegisterEventHotKey`,
+  no permission required)
+- right-click it for "Open Palette" / "Permissions…" / "Quit Heycast"
 - `esc` or focusing another app closes the palette
+
+## Permissions
+
+heycast needs one grant today: **Accessibility**, used by snippets to read the
+focused text and type the expansion back in. The first-run wizard explains it,
+reports the real TCC state, triggers the consent prompt and deep-links to the
+matching System Settings pane; reopen it any time from "Permissions…".
+
+- The `⌥Space` hotkey needs no grant: Carbon `RegisterEventHotKey` is
+  delivered by the window server.
+- Microphone and Speech Recognition are not asked for because no audio code
+  exists. Add them with the voice feature — and Speech only if transcription
+  uses Apple's `SFSpeechRecognizer` rather than a remote model.
+- Input Monitoring is not needed: a keyword event tap that can modify events
+  (snippets must swallow the trigger) is authorized by Accessibility. Only a
+  listen-only tap would need it.
+- Screen Recording and Full Disk Access are not asked for; nothing reads the
+  screen or protected files such as Mail, Messages and Safari.
+- System prompts only appear for a bundled, `/Applications`-installed app;
+  `swift run` does not get them.
+- Ad-hoc signatures change on every build, and macOS keys TCC entries to the
+  signature, so rebuilds re-prompt. Export `HEYCAST_SIGN_IDENTITY` with a
+  stable codesigning identity (e.g. a self-signed "Heycast Dev" cert) to keep
+  grants across `make run`.
+- Screen Recording and Full Disk Access only take effect after relaunching.
+  macOS offers "Quit & Reopen" for screen recording; full disk access is
+  granted by adding the app with `+` in the pane.
+- `make reset-permissions` runs `tccutil reset All <bundle id>` and forgets
+  the first-run flag.
 
 ## Layout
 
@@ -37,7 +69,12 @@ Sources/Heycast/
   AppDelegate.swift      status-bar item + panel lifecycle
   PaletteController.swift NSPanel configuration, placement, esc/click-away
   PaletteView.swift      SwiftUI palette content + model
-Resources/Info.plist     LSUIElement, bundle metadata
+  HotKeyController.swift global ⌥Space via Carbon RegisterEventHotKey
+  Permission.swift       TCC permissions: status checks, requests, panes
+  PermissionWizardModel.swift  wizard steps, refresh on app activation
+  PermissionWizardView.swift   wizard pages + summary
+  PermissionWizardController.swift  setup window lifecycle
+Resources/Info.plist     LSUIElement, bundle metadata, TCC usage strings
 scripts/lib.sh           plist metadata + bundle assembly, shared by the scripts
 scripts/dev.sh           debug/release build, install to /Applications, relaunch
 scripts/bundle.sh        release gate, bundle, zip archive, SHA256SUMS
@@ -51,5 +88,6 @@ launcher.
 
 ## Next
 
-- Global hotkey (no accessibility permission needed via Carbon `RegisterEventHotKey`)
+- Snippets: keyword storage, keystroke matching and in-place expansion, all
+  under the Accessibility grant
 - Real command execution and results list

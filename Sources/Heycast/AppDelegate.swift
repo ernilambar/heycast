@@ -2,11 +2,31 @@ import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private static let wizardShownKey = "setup.wizard.shown"
+
     private let palette = PaletteController()
+    private let permissions = PermissionWizardController()
+    private var hotKey: HotKeyController?
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installStatusItem()
+        installHotKey()
+        showWizardOnFirstLaunch()
+    }
+
+    private func installHotKey() {
+        hotKey = HotKeyController { [weak self] in
+            self?.palette.toggle()
+        }
+    }
+
+    /// The permissions are declared in Info.plist, but macOS only prompts the
+    /// first time something asks, so the wizard walks through them once.
+    private func showWizardOnFirstLaunch() {
+        guard !UserDefaults.standard.bool(forKey: Self.wizardShownKey) else { return }
+        UserDefaults.standard.set(true, forKey: Self.wizardShownKey)
+        permissions.show()
     }
 
     private func installStatusItem() {
@@ -31,9 +51,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showMenu() {
         let menu = NSMenu()
-        menu.addItem(
+
+        let openPaletteItem = menu.addItem(
             withTitle: "Open Palette",
             action: #selector(openPalette),
+            keyEquivalent: " "
+        )
+        openPaletteItem.keyEquivalentModifierMask = [.option]
+        openPaletteItem.target = self
+
+        menu.addItem(
+            withTitle: "Permissions…",
+            action: #selector(openPermissions),
             keyEquivalent: ""
         ).target = self
         menu.addItem(.separator())
@@ -50,5 +79,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openPalette() {
         palette.show()
+    }
+
+    @objc private func openPermissions() {
+        permissions.show()
     }
 }

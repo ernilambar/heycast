@@ -46,11 +46,17 @@ require_arm64_binary() {
 #
 # Ad-hoc signing is enough: macOS refuses to launch an unsigned bundle on Apple
 # silicon, and the app does not go through the notarized distribution path.
+# It does cost the TCC grants, though: an ad-hoc signature's CDHash changes on
+# every build, and macOS keys Privacy & Security entries to it, so every
+# rebuild asks again. Export HEYCAST_SIGN_IDENTITY with a stable local identity
+# (`security find-identity -p codesigning`) to keep grants across builds.
+sign_identity="${HEYCAST_SIGN_IDENTITY:--}"
+
 assemble_bundle() {
     local config="$1"
     rm -rf "$app"
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
     cp "$root/.build/$config/$executable" "$app/Contents/MacOS/$executable"
     cp "$plist" "$app/Contents/Info.plist"
-    codesign --force --sign - "$app"
+    codesign --force --sign "$sign_identity" "$app"
 }
