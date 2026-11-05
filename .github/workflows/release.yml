@@ -38,5 +38,5 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             dist/Heycast-macos-arm64.zip \
             dist/SHA256SUMS \
-            --title "$app_name $GITHUB_REF_NAME" \
-            --generate-notes
+            --title "$GITHUB_REF_NAME" \
+            --notes "$app_name $GITHUB_REF_NAME"

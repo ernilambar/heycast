@@ -126,10 +126,10 @@ so a bump is a single-file change.
 
 Pushing the tag runs `.github/workflows/release.yml`. It rejects a tag whose
 version differs from the plist, runs the tests, builds the bundle, and
-publishes `Heycast-macos-arm64.zip` and `SHA256SUMS` on the GitHub release,
-with notes generated from the commits and merged pull requests since the
-previous tag. The tag carries a `v` prefix; the plist keeps the bare version.
-The release title is `CFBundleName` plus the tag, e.g. `Heycast v0.1.0`.
+publishes `Heycast-macos-arm64.zip` and `SHA256SUMS` on the GitHub release.
+The tag carries a `v` prefix; the plist keeps the bare version. The release
+title is the tag alone, e.g. `v0.1.0`, and the body is `CFBundleName` plus the
+tag, e.g. `Heycast v0.1.0`.
 
 ## Layout
 
