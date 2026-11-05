@@ -194,12 +194,13 @@ enum ApplicationSearch {
             .map(\.app)
     }
 
-    private struct NameMatch {
+    /// Match quality shared with the palette's other result kinds.
+    struct NameMatch {
         let tier: Int
         let detail: Int
     }
 
-    private static func nameMatch(candidate rawCandidate: String, query: String) -> NameMatch? {
+    static func nameMatch(candidate rawCandidate: String, query: String) -> NameMatch? {
         let candidate = folded(rawCandidate)
         guard !candidate.isEmpty else { return nil }
 
@@ -243,7 +244,7 @@ enum ApplicationSearch {
         return comparison == .orderedAscending
     }
 
-    private static func folded(_ string: String) -> String {
+    static func folded(_ string: String) -> String {
         string.folding(
             options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
             locale: .current

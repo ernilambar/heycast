@@ -36,8 +36,8 @@ with its top edge offset 20% from the top. It is `nonactivatingPanel` +
 
 ## Permissions while developing
 
-The app needs one grant today: **Accessibility**, used by snippets to read the
-focused text and type the expansion back in.
+The app needs one grant today: **Accessibility**, used by snippets to type ⌘V
+into the app in front after the palette copies the snippet body.
 
 - The `⌥Space` hotkey needs no grant: Carbon `RegisterEventHotKey` is
   delivered by the window server.
@@ -72,6 +72,8 @@ Sources/Heycast/
   PaletteController.swift NSPanel configuration, placement, resize, launching
   PaletteView.swift      SwiftUI palette content, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking
+  Snippet.swift          snippet front matter, folder loading
+  PaletteSearch.swift    merged app + snippet ranking for the palette
   UsageStore.swift       persisted launch counts and recency, usage scoring
   HotKeyController.swift global ⌥Space via Carbon RegisterEventHotKey
   Permission.swift       TCC permissions: status checks, requests, panes
@@ -90,8 +92,8 @@ Tests/HeycastTests/      Swift Testing suites for the pure logic
 ## Tests
 
 `make test` runs the Swift Testing suites in `Tests/HeycastTests/`: search
-ranking, usage scoring and persistence, config path resolution, and launch
-history pruning. These cover the pure logic; the palette, panel, hotkey and
+ranking, snippet parsing and merged palette ranking, usage scoring and
+persistence, config path resolution, and launch history pruning. These cover the pure logic; the palette, panel, hotkey and
 TCC code are not unit-tested because they need real UI/system state.
 
 The test target depends on the executable target and imports it with
@@ -105,7 +107,7 @@ CI (`.github/workflows/ci.yml`) runs the suite on `macos-15` for pushes to
 
 ## Next
 
-- Snippets: keyword storage, keystroke matching and in-place expansion, all
-  under the Accessibility grant
+- Snippets: typed-keyword expansion in place; palette paste already works.
+  Needs an event tap authorized by Accessibility.
 - More result sources: windows, files, system settings and commands alongside
   applications

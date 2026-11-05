@@ -1,5 +1,7 @@
 import AppKit
+import ApplicationServices
 import Combine
+import CoreGraphics
 import SwiftUI
 
 /// Borderless floating panel that can take keyboard focus without dragging
@@ -16,6 +18,9 @@ final class PaletteController: NSObject, NSWindowDelegate {
     private let panel: PalettePanel
     private var keyMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
+    /// The app to hand focus back to when a snippet is pasted, captured before
+    /// opening the palette activates Heycast.
+    private var previousApplication: NSRunningApplication?
 
     override init() {
         let size = NSSize(
@@ -43,8 +48,8 @@ final class PaletteController: NSObject, NSWindowDelegate {
         panel.contentView = NSHostingView(
             rootView: PaletteView(
                 model: model,
-                onOpen: { [weak self] app in self?.launch(app) },
-                onSubmit: { [weak self] in self?.launchSelection() }
+                onActivate: { [weak self] item in self?.activate(item) },
+                onSubmit: { [weak self] in self?.activateSelection() }
             )
         )
         panel.setContentSize(size)
@@ -70,6 +75,10 @@ final class PaletteController: NSObject, NSWindowDelegate {
     }
 
     func show() {
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        if frontmost?.bundleIdentifier != Bundle.main.bundleIdentifier {
+            previousApplication = frontmost
+        }
         model.reset()
         moveToActiveScreen()
         panel.makeKeyAndOrderFront(nil)
@@ -88,14 +97,23 @@ final class PaletteController: NSObject, NSWindowDelegate {
         hide()
     }
 
-    // MARK: - Launching
+    // MARK: - Activating
 
-    private func launchSelection() {
-        guard let app = model.selected else {
+    private func activateSelection() {
+        guard let item = model.selected else {
             NSSound.beep()
             return
         }
-        launch(app)
+        activate(item)
+    }
+
+    private func activate(_ item: PaletteItem) {
+        switch item {
+        case .application(let app):
+            launch(app)
+        case .snippet(let snippet):
+            paste(snippet)
+        }
     }
 
     private func launch(_ app: LaunchableApp) {
@@ -113,6 +131,48 @@ final class PaletteController: NSObject, NSWindowDelegate {
                 UsageStore.shared.recordLaunch(of: app)
             }
         }
+    }
+
+    /// Copies the snippet and types ⌘V into the app that was frontmost before
+    /// the palette opened. Accessibility authorizes the synthetic keystroke;
+    /// without it the text still lands on the clipboard, but nothing is typed.
+    private func paste(_ snippet: Snippet) {
+        hide()
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(snippet.body, forType: .string)
+
+        guard AXIsProcessTrusted() else {
+            NSLog(
+                "Heycast: copied snippet “%@” to the clipboard; Accessibility is needed to paste it",
+                snippet.keyword
+            )
+            return
+        }
+
+        let target = previousApplication
+        target?.activate(from: .current)
+
+        // The target needs a moment to become key again; posting the keystroke
+        // immediately would send it to Heycast or to the outgoing window.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            Self.postPasteKeystroke()
+        }
+    }
+
+    private static func postPasteKeystroke() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let vKey: CGKeyCode = 9
+
+        guard let down = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true),
+              let up = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false) else {
+            return
+        }
+        down.flags = .maskCommand
+        up.flags = .maskCommand
+        down.post(tap: .cghidEventTap)
+        up.post(tap: .cghidEventTap)
     }
 
     // MARK: - Keyboard
@@ -146,7 +206,7 @@ final class PaletteController: NSObject, NSWindowDelegate {
 
         switch event.keyCode {
         case 36, 76: // return, keypad enter
-            launchSelection()
+            activateSelection()
             return true
         case 125: // down arrow
             model.moveSelection(by: 1)

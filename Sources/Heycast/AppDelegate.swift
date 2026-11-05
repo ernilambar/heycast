@@ -17,10 +17,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Resolves `config.json` once per launch and creates the snippets folder,
-    /// so the menu and the keystroke engine cannot disagree on one path.
+    /// so the menu and the palette cannot disagree on one path.
     private func logSnippetsDirectory() {
         let directory = AppConfig.load().snippetsDirectoryURL()
-        NSLog("Heycast: snippets directory: %@", directory.path)
+        let count = SnippetLibrary.load(from: directory).count
+        NSLog("Heycast: snippets directory: %@ (%d snippets)", directory.path, count)
     }
 
     private func installHotKey() {

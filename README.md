@@ -18,14 +18,16 @@ from Launchpad or Finder.
 - Click the menu-bar item to toggle it.
 - Right-click the menu-bar item for "Open Palette", "Edit Config…",
   "Permissions…" and "Quit Heycast".
-- `↑`/`↓` moves the selection, `↩` launches it, clicking a row launches that
-  app, `esc` or focusing another app closes the palette.
+- `↑`/`↓` moves the selection, `↩` launches the selected app or pastes the
+  selected snippet, clicking a row does the same, `esc` or focusing another app
+  closes the palette.
 
 ## Search
 
 The palette indexes `.app` bundles under `/Applications`,
 `/System/Applications` and `~/Applications`, including symlinked bundles such
-as Safari. The scan runs in the background the first time the palette opens.
+as Safari, alongside the snippets folder (see [Snippets](#snippets)). The app
+scan runs in the background the first time the palette opens.
 
 - Type to filter by name: exact, prefix, acronym, word-prefix, substring and
   subsequence matches rank in that order; usage breaks ties inside a tier.
@@ -46,7 +48,7 @@ All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
 
 ```json
 {
-  "snippetsDirectory": "~/Dropbox/heycast-snippets"
+  "snippetsDirectory": "~/Documents/heycast-snippets"
 }
 ```
 
@@ -58,10 +60,36 @@ All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
 - Edits take effect on the next launch.
 - A symlinked `snippets/` folder works too.
 
+## Snippets
+
+A snippet is a Markdown file in the snippets folder. The front matter gives it
+a keyword and a title; the body is the text that gets pasted.
+
+```markdown
+---
+keyword: ;sig
+name: Email signature
+---
+
+Best regards,
+Nilambar
+```
+
+- `keyword` is required and is what the palette matches on; `name` is optional
+  and defaults to the keyword.
+- Files are re-read every time the palette opens, so an edit shows up at once.
+- Files without front matter, without a keyword, or with an empty body are
+  skipped and logged.
+- Snippets are found by keyword and by name with the same ranking as apps; with
+  an empty query they follow the applications, ordered by keyword.
+- Pasting types ⌘V into the app that was frontmost before the palette opened,
+  which is what needs Accessibility. Without the grant the text is still copied
+  to the clipboard.
+
 ## Permissions
 
-Heycast asks for one grant: **Accessibility**, used by snippets to read the
-focused text and type the expansion back in. The first-run wizard explains it,
+Heycast asks for one grant: **Accessibility**, used by snippets to paste into
+the app in front by typing ⌘V for you. The first-run wizard explains it,
 shows the real system state, raises the consent prompt and links to the
 matching System Settings pane. Reopen it any time from "Permissions…".
 
@@ -75,7 +103,5 @@ and signing caveats live in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Planned
 
-- Snippets: keyword storage, keystroke matching and in-place expansion, under
-  the Accessibility grant.
 - More result sources: windows, files, system settings and commands alongside
   applications.

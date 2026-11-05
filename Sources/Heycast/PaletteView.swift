@@ -9,25 +9,34 @@ final class PaletteModel: ObservableObject {
             updateResults()
         }
     }
-    @Published private(set) var results: [LaunchableApp] = []
+    @Published private(set) var results: [PaletteItem] = []
     @Published private(set) var selectionIndex = 0
     @Published private(set) var isLoading = false
 
     private let usageStore: UsageStore
+    private let snippetsDirectory: URL
     private var usage = UsageRanking.empty
     private var applications: [LaunchableApp] = []
+    private var snippets: [Snippet] = []
     private var hasLoadedApplications = false
 
-    init(usageStore: UsageStore = .shared) {
+    init(
+        usageStore: UsageStore = .shared,
+        snippetsDirectory: URL = AppConfig.load().snippetsDirectoryURL()
+    ) {
         self.usageStore = usageStore
+        self.snippetsDirectory = snippetsDirectory
     }
 
-    var selected: LaunchableApp? {
+    var selected: PaletteItem? {
         results.indices.contains(selectionIndex) ? results[selectionIndex] : nil
     }
 
     func reset() {
         usage = usageStore.ranking()
+        // Snippets are re-read on every open, so editing a file shows up
+        // without restarting the app.
+        snippets = SnippetLibrary.load(from: snippetsDirectory)
         query = ""
         selectionIndex = 0
         updateResults()
@@ -53,13 +62,18 @@ final class PaletteModel: ObservableObject {
         selectionIndex = (selectionIndex + delta + count) % count
     }
 
-    func select(_ app: LaunchableApp) {
-        guard let index = results.firstIndex(of: app) else { return }
+    func select(_ item: PaletteItem) {
+        guard let index = results.firstIndex(of: item) else { return }
         selectionIndex = index
     }
 
     private func updateResults() {
-        results = ApplicationSearch.rank(applications, matching: query, usage: usage)
+        results = PaletteSearch.rank(
+            applications: applications,
+            snippets: snippets,
+            matching: query,
+            usage: usage
+        )
         selectionIndex = 0
     }
 }
@@ -80,7 +94,7 @@ private final class ApplicationIconCache {
 
 struct PaletteView: View {
     @ObservedObject var model: PaletteModel
-    let onOpen: (LaunchableApp) -> Void
+    let onActivate: (PaletteItem) -> Void
     let onSubmit: () -> Void
 
     @FocusState private var isFocused: Bool
@@ -92,7 +106,7 @@ struct PaletteView: View {
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                TextField("Search applications…", text: $model.query)
+                TextField("Search applications and snippets…", text: $model.query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 22))
                     .focused($isFocused)
@@ -135,16 +149,16 @@ struct PaletteView: View {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical) {
                         LazyVStack(spacing: 0) {
-                            ForEach(model.results) { app in
-                                ApplicationRow(
-                                    app: app,
-                                    isSelected: model.selected == app,
+                            ForEach(model.results) { item in
+                                PaletteRow(
+                                    item: item,
+                                    isSelected: model.selected == item,
                                     action: {
-                                        model.select(app)
-                                        onOpen(app)
+                                        model.select(item)
+                                        onActivate(item)
                                     }
                                 )
-                                .id(app.id)
+                                .id(item.id)
                             }
                         }
                     }
@@ -174,7 +188,7 @@ struct PaletteView: View {
 
             Spacer()
 
-            Text("↑↓ select   ↩ open   esc close")
+            Text(actionHintText)
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
         }
@@ -186,16 +200,23 @@ struct PaletteView: View {
         PaletteControllerLayout.resultAreaHeight(for: model.results.count)
     }
 
+    private var actionHintText: String {
+        if model.selected?.snippet != nil {
+            return "↑↓ select   ↩ paste   esc close"
+        }
+        return "↑↓ select   ↩ open   esc close"
+    }
+
     private var emptyMessage: String {
         let trimmed = model.query.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "No applications found." : "No applications match “\(trimmed)”."
+        return trimmed.isEmpty ? "Nothing to show." : "No results match “\(trimmed)”."
     }
 
     private var resultCountText: String {
         switch model.results.count {
         case 0: "No results"
-        case 1: "1 application"
-        default: "\(model.results.count) applications"
+        case 1: "1 result"
+        default: "\(model.results.count) results"
         }
     }
 
@@ -216,26 +237,31 @@ struct PaletteView: View {
     }
 }
 
-private struct ApplicationRow: View {
-    let app: LaunchableApp
+private struct PaletteRow: View {
+    let item: PaletteItem
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Image(nsImage: ApplicationIconCache.shared.image(for: app.url))
-                    .resizable()
-                    .interpolation(.high)
+                icon
                     .frame(width: 22, height: 22)
 
-                Text(app.name)
+                Text(item.title)
                     .font(.system(size: 14))
                     .foregroundStyle(isSelected ? .white : .primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
 
                 Spacer(minLength: 0)
+
+                if let snippet = item.snippet {
+                    Text(snippet.keyword)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(isSelected ? .white.opacity(0.85) : .secondary)
+                        .lineLimit(1)
+                }
             }
             .padding(.horizontal, 10)
             .frame(height: PaletteControllerLayout.rowHeight)
@@ -246,6 +272,20 @@ private struct ApplicationRow: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        switch item {
+        case .application(let app):
+            Image(nsImage: ApplicationIconCache.shared.image(for: app.url))
+                .resizable()
+                .interpolation(.high)
+        case .snippet:
+            Image(systemName: "text.quote")
+                .font(.system(size: 15))
+                .foregroundStyle(isSelected ? .white : .secondary)
+        }
     }
 }
 

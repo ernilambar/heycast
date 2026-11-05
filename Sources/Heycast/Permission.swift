@@ -15,14 +15,15 @@ enum PermissionStatus {
 /// The macOS permissions the wizard walks through.
 ///
 /// Only grants a shipped or committed feature needs belong here. Today that is
-/// Accessibility alone: snippets read the focused text and type the expansion
-/// back in, and any future UI action needs the same grant.
+/// Accessibility alone: snippets paste by synthesizing ⌘V into the app in
+/// front, and any future UI action needs the same grant.
 ///
 /// Deliberately absent:
 /// - Microphone / Speech Recognition: no audio code exists. Add them with the
 ///   voice feature, and Speech only if transcription uses Apple's recognizer.
-/// - Input Monitoring: a keyword event tap that can modify events (the kind
-///   snippets need to swallow the trigger) is authorized by Accessibility.
+/// - Input Monitoring: a keyword event tap that can modify events (the kind a
+///   typed-trigger expansion would need to swallow the keyword) is authorized
+///   by Accessibility.
 /// - Screen Recording / Full Disk Access: nothing reads the screen or
 ///   protected files; these are the two most invasive grants.
 ///
@@ -38,7 +39,7 @@ enum Permission: String, CaseIterable, Identifiable {
     var title: String { "Accessibility" }
 
     var summary: String {
-        "heycast reads the focused window and types on your behalf, which is how snippets expand in place and how actions reach the app in front."
+        "heycast types on your behalf, which is how a snippet is pasted into the app in front."
     }
 
     var instruction: String {
