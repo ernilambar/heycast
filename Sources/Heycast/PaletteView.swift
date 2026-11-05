@@ -299,8 +299,8 @@ private struct PaletteRow: View {
             Image(nsImage: ApplicationIconCache.shared.image(for: app.url))
                 .resizable()
                 .interpolation(.high)
-        case .snippet:
-            Image(systemName: "text.quote")
+        case .snippet(let snippet):
+            Image(systemName: snippet.isScript ? "terminal" : "text.quote")
                 .font(.system(size: 15))
                 .foregroundStyle(isSelected ? .white : .secondary)
         }

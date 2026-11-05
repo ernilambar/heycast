@@ -6,13 +6,27 @@ import Foundation
 /// readable and editable outside Heycast. The filename is irrelevant; the
 /// front matter carries the identity.
 struct Snippet: Identifiable, Hashable, Sendable {
+    /// Where the pasted text comes from.
+    enum Source: Hashable, Sendable {
+        /// The body, pasted as written.
+        case text
+        /// The body is a script; its standard output is pasted.
+        case inlineScript
+        /// An executable file outside the snippet; its standard output is pasted.
+        case scriptFile(URL)
+    }
+
     /// What the snippet is matched and displayed by, e.g. `;sig`.
     let keyword: String
     /// Human-readable title; defaults to the keyword when front matter omits it.
     let name: String
-    /// Exact text pasted when the snippet is activated.
+    /// Exact text pasted when the snippet is activated, or the script source
+    /// for `.inlineScript`. Empty for `.scriptFile`.
     let body: String
     let url: URL
+    var source: Source = .text
+
+    var isScript: Bool { source != .text }
 
     var id: URL { url }
 }
@@ -28,8 +42,18 @@ struct Snippet: Identifiable, Hashable, Sendable {
 ///     Best regards,
 ///     Nilambar
 ///
-/// Files without front matter, without a keyword, or with an empty body are
-/// skipped: there is nothing to match or paste. The body is everything after
+/// Two front-matter fields turn a snippet into a script whose standard output
+/// is pasted instead of the body:
+///
+/// - `type: script` runs the body. Its `#!` line picks the interpreter;
+///   without one it runs with `/bin/zsh`.
+/// - `script: <path>` runs an executable file and ignores the body. `~`
+///   expands to the home folder; a relative path resolves against the
+///   snippet file's folder.
+///
+/// Files without front matter, without a keyword, with an unknown `type`, or
+/// with an empty body (other than `script:` ones) are skipped: there is
+/// nothing to match or paste. The body is everything after
 /// the closing `---` line, kept exactly as written (leading blank lines and
 /// the trailing newline included), so a snippet pastes the same text in every
 /// editor that authored it.
@@ -100,12 +124,32 @@ enum SnippetLibrary {
         }
 
         guard let keyword = fields["keyword"], !keyword.isEmpty else { return nil }
+        let name = fields["name"].flatMap { $0.isEmpty ? nil : $0 } ?? keyword
+
+        if let path = fields["script"], !path.isEmpty {
+            let file = resolve(path, relativeTo: url.deletingLastPathComponent())
+            return Snippet(keyword: keyword, name: name, body: "", url: url, source: .scriptFile(file))
+        }
+
+        let source: Snippet.Source
+        switch fields["type"]?.lowercased() ?? "" {
+        case "", "text": source = .text
+        case "script": source = .inlineScript
+        default: return nil
+        }
 
         let body = lines[(closing + 1)...].joined(separator: "\n")
         guard !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
 
-        let name = fields["name"].flatMap { $0.isEmpty ? nil : $0 } ?? keyword
-        return Snippet(keyword: keyword, name: name, body: body, url: url)
+        return Snippet(keyword: keyword, name: name, body: body, url: url, source: source)
+    }
+
+    private static func resolve(_ path: String, relativeTo directory: URL) -> URL {
+        let expanded = (path as NSString).expandingTildeInPath
+        if expanded.hasPrefix("/") {
+            return URL(fileURLWithPath: expanded).standardizedFileURL
+        }
+        return directory.appendingPathComponent(expanded).standardizedFileURL
     }
 
     /// Surrounding whitespace and one pair of matching quotes come off, so

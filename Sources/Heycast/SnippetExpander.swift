@@ -191,9 +191,22 @@ final class SnippetExpander {
             return
         }
 
+        // Scripts run before the keyword is removed: if one fails, the typed
+        // keyword stays put instead of vanishing with nothing in its place.
+        Task { [weak self] in
+            guard let text = await SnippetRunner.text(for: snippet) else {
+                NSSound.beep()
+                self?.isExpanding = false
+                return
+            }
+            self?.paste(text, replacingKeywordOfLength: keywordLength)
+        }
+    }
+
+    private func paste(_ text: String, replacingKeywordOfLength keywordLength: Int) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(snippet.body, forType: .string)
+        pasteboard.setString(text, forType: .string)
 
         SyntheticKeyboard.postBackspaces(keywordLength)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in

@@ -151,21 +151,33 @@ final class PaletteController: NSObject, NSWindowDelegate {
     private func paste(_ snippet: Snippet) {
         hide()
 
+        // Captured now: reopening the palette while a script runs replaces it.
+        let target = previousApplication
+        Task { [weak self] in
+            guard let text = await SnippetRunner.text(for: snippet) else {
+                NSSound.beep()
+                return
+            }
+            self?.paste(text, keyword: snippet.keyword, into: target)
+        }
+    }
+
+    private func paste(_ text: String, keyword: String, into target: NSRunningApplication?) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(snippet.body, forType: .string)
+        pasteboard.setString(text, forType: .string)
 
         guard AXIsProcessTrusted() else {
             NSLog(
                 "Heycast: copied snippet “%@” to the clipboard; Accessibility is needed to paste it",
-                snippet.keyword
+                keyword
             )
             onAccessibilityMissing?()
             return
         }
 
-        guard let target = previousApplication, !target.isTerminated else {
-            NSLog("Heycast: copied snippet “%@” to the clipboard; no app to paste into", snippet.keyword)
+        guard let target, !target.isTerminated else {
+            NSLog("Heycast: copied snippet “%@” to the clipboard; no app to paste into", keyword)
             return
         }
 

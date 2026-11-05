@@ -87,8 +87,9 @@ All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
 
 ## Snippets
 
-A snippet is a Markdown file in the snippets folder. The front matter gives it
-a keyword and a title; the body is the text that gets pasted or expanded.
+A snippet is a Markdown file in the snippets folder: a `keyword` in the front
+matter, then the text to paste. Set `type: script` or `script: <path>` to paste
+a script's output instead. Full reference: [docs/snippets.md](docs/snippets.md).
 
 ```markdown
 ---
@@ -97,30 +98,8 @@ name: Email signature
 ---
 
 Best regards,
-Nilambar
+Nilambar Sharma
 ```
-
-- `keyword` is required and is what the palette matches on; `name` is optional
-  and defaults to the keyword.
-- Typing a keyword in any app expands it in place. Matching is exact and
-  case-sensitive; typing `;sig` replaces it with the body immediately.
-- If one keyword is a prefix of another, the shorter one waits instead of
-  stealing the longer trigger.
-- Files are re-read every time the palette opens and when the snippets folder
-  changes, so an edit shows up without restarting.
-- The body is everything after the closing `---` line, pasted exactly as
-  written: leading blank lines and the final newline included. Only
-  whitespace-only bodies are treated as empty.
-- The snippets shortcut opens the same panel with applications filtered out;
-  typing still searches snippets by keyword and name.
-- Files without front matter, without a keyword, or with an empty body are
-  skipped and logged.
-- Snippets are found by keyword and by name with the same ranking as apps; with
-  an empty query they follow the applications, ordered by keyword.
-- Pasting types ⌘V into the app that was frontmost before the palette opened;
-  inline expansion deletes the typed keyword and types ⌘V into the current app.
-  Both need Accessibility. Without the grant, palette activation still copies
-  the body to the clipboard.
 
 ## Permissions
 
@@ -139,7 +118,6 @@ If no consent prompt appears, the standard cause is running an app from
 outside `/Applications`; move Heycast into `/Applications` and reopen it. Build
 and signing caveats live in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Planned
+## License
 
-- More result sources: windows, files, system settings and commands alongside
-  applications.
+[MIT](LICENSE) © 2026 [Nilambar Sharma](https://www.nilambar.net)
