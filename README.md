@@ -29,7 +29,8 @@ item. Click it to open the palette.
 - left-click the status-bar item to toggle it
 - `⌥Space` toggles it globally, from any app (Carbon `RegisterEventHotKey`,
   no permission required)
-- right-click it for "Open Palette" / "Permissions…" / "Quit Heycast"
+- right-click it for "Open Palette" / "Edit Config…" / "Permissions…" /
+  "Quit Heycast"
 - `esc` or focusing another app closes the palette
 
 ## Applications
@@ -45,7 +46,7 @@ of the process.
 - with no query, frequently and recently launched apps come first, then the
   rest alphabetically
 - launch counts and recency persist in
-  `~/Library/Application Support/com.nilambar.heycast/usage.json`; the score
+  `~/Library/Application Support/net.nilambar.heycast/usage.json`; the score
   damps raw counts logarithmically and halves every 30 days without a launch,
   and history is capped at the 200 most recently used apps
 - `↑`/`↓` moves the selection, `↩` launches it
@@ -53,6 +54,28 @@ of the process.
 - the panel grows from one to seven visible rows, then scrolls
 
 Apps installed after Heycast starts show up the next time it is launched.
+
+## Config
+
+All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
+`config.json` there is optional, read at launch and never written by the app;
+"Edit Config…" in the status-bar menu seeds a template and opens it in your
+default editor.
+
+```json
+{
+  "snippetsDirectory": "~/Dropbox/heycast-snippets"
+}
+```
+
+- the snippets folder defaults to `snippets/` beside `usage.json`; a configured
+  path replaces it entirely and is created if missing
+- `~` expands to the home directory; relative paths resolve against the config
+  file's own directory
+- a path that cannot be created is logged and ignored in favour of the default
+- editing the file takes effect on the next launch
+- a symlinked `snippets/` folder works too, since links are resolved before
+  reading and watching
 
 ## Permissions
 
@@ -88,7 +111,9 @@ matching System Settings pane; reopen it any time from "Permissions…".
 ```
 Sources/Heycast/
   HeycastApp.swift       @main entry, accessory activation policy
-  AppDelegate.swift      status-bar item + panel lifecycle
+  AppDelegate.swift      status-bar item, config menu, panel lifecycle
+  SupportDirectory.swift Application Support namespace, file locations
+  AppConfig.swift        config.json loading and snippets path resolution
   PaletteController.swift NSPanel configuration, placement, resize, launching
   PaletteView.swift      SwiftUI palette content, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking

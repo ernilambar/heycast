@@ -12,7 +12,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         installStatusItem()
         installHotKey()
+        logSnippetsDirectory()
         showWizardOnFirstLaunch()
+    }
+
+    /// Resolves `config.json` once per launch and creates the snippets folder,
+    /// so the menu and the keystroke engine cannot disagree on one path.
+    private func logSnippetsDirectory() {
+        let directory = AppConfig.load().snippetsDirectoryURL()
+        NSLog("Heycast: snippets directory: %@", directory.path)
     }
 
     private func installHotKey() {
@@ -61,6 +69,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         openPaletteItem.target = self
 
         menu.addItem(
+            withTitle: "Edit Config…",
+            action: #selector(editConfig),
+            keyEquivalent: ""
+        ).target = self
+        menu.addItem(
             withTitle: "Permissions…",
             action: #selector(openPermissions),
             keyEquivalent: ""
@@ -83,5 +96,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openPermissions() {
         permissions.show()
+    }
+
+    /// Seeds a template on first use and hands the file to the default editor.
+    /// The app never writes config on its own, only when asked from this menu.
+    @objc private func editConfig() {
+        do {
+            let url = try AppConfig.prepareForEditing()
+            if !NSWorkspace.shared.open(url) {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
+        } catch {
+            NSLog(
+                "Heycast: cannot prepare config at %@: %@",
+                SupportDirectory.configFile.path,
+                error.localizedDescription
+            )
+            NSWorkspace.shared.activateFileViewerSelecting([SupportDirectory.url])
+        }
     }
 }
