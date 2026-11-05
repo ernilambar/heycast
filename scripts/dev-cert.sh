@@ -35,3 +35,4 @@ trap 'rm -rf "$tmp"' EXIT
 security import "$tmp/id.p12" -k "$keychain" -P heycast -T /usr/bin/codesign
 
 printf 'created identity "%s"\n' "$name"
+printf 'next: make reset-permissions && make run, then grant Accessibility again\n'

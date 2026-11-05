@@ -94,6 +94,9 @@ snippet body.
   signature, so rebuilds re-prompt. Run `make dev-cert` once: it creates a
   self-signed "Heycast Dev" identity that the scripts use automatically, so
   grants survive `make run`. `HEYCAST_SIGN_IDENTITY` overrides the identity.
+  After creating it (or switching identity), run `make reset-permissions` and
+  grant again: an existing grant still points at the old signature, so it
+  shows ON in System Settings but does not apply.
 - Screen Recording and Full Disk Access only take effect after relaunching.
   macOS offers "Quit & Reopen" for screen recording; full disk access is
   granted by adding the app with `+` in the pane.
