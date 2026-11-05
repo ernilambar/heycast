@@ -12,6 +12,7 @@ enum SnippetRunner {
     enum Failure: Error, CustomStringConvertible {
         case launch(String)
         case exit(Int32, String)
+        case unsafeFile(String, String)
         case timedOut
         case emptyOutput
         case invalidOutput
@@ -21,6 +22,7 @@ enum SnippetRunner {
             case .launch(let reason): "could not start: \(reason)"
             case .exit(let status, let stderr):
                 stderr.isEmpty ? "exited with status \(status)" : "exited with status \(status): \(stderr)"
+            case .unsafeFile(let path, let reason): "refused: \(path) \(reason)"
             case .timedOut: "timed out"
             case .emptyOutput: "printed nothing"
             case .invalidOutput: "printed text that is not UTF-8"
@@ -45,9 +47,29 @@ enum SnippetRunner {
         case .text:
             return snippet.body
         case .inlineScript:
+            try checkOwnership(of: snippet.url)
             return try await offMain { try runInline(snippet.body, timeout: timeout) }
         case .scriptFile(let file):
+            try checkOwnership(of: snippet.url)
+            try checkOwnership(of: file)
             return try await offMain { try run(file, timeout: timeout) }
+        }
+    }
+
+    /// Refuses code that someone else could have written, like `ssh` does
+    /// with its config: the file must belong to you or root and must not be
+    /// writable by group or others. Symlinks are followed, so the check
+    /// applies to the file that actually runs. A missing file passes here and
+    /// fails at launch with the clearer error.
+    static func checkOwnership(of url: URL) throws {
+        var info = stat()
+        guard stat(url.path, &info) == 0 else { return }
+
+        if info.st_uid != getuid(), info.st_uid != 0 {
+            throw Failure.unsafeFile(url.path, "is owned by another user")
+        }
+        if info.st_mode & (S_IWGRP | S_IWOTH) != 0 {
+            throw Failure.unsafeFile(url.path, "is writable by group or others")
         }
     }
 

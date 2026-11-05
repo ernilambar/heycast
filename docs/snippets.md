@@ -121,5 +121,19 @@ run from Terminal.
 
 ### Security
 
-Typing a keyword runs code. Keep the snippets folder to files you wrote; do
-not sync it with folders other people can write to.
+Typing a keyword runs code.
+
+- **Scripts inherit Heycast's Accessibility grant.** A script can type,
+  click and read other apps' windows through `osascript`/System Events.
+- **Keep the snippets folder local and written only by you.** Never point
+  `snippetsDirectory` at a shared, synced or cloned folder others can write
+  to: their file would run the moment you type its keyword.
+- **Output pasted into a terminal can run commands** if it contains a
+  newline. Keep script output to what you expect to paste.
+- **Treat clipboard input as untrusted.** Validate it; never `eval` it or pass
+  it to `sh -c`.
+- Keep side effects (network writes, file changes) out of snippet scripts;
+  keywords can fire by accident.
+- Heycast refuses to run a script when the snippet file or script file is
+  owned by another user (root is allowed) or writable by group or others.
+  The refusal is logged; fix it with `chmod go-w <file>`.

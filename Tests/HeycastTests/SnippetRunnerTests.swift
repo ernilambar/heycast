@@ -139,3 +139,54 @@ private func inline(_ body: String) -> Snippet {
         }
     }
 }
+
+@Suite struct SnippetOwnershipTests {
+    private func file(mode: Int) throws -> (URL, URL) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("heycast-owner-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("snippet.md")
+        try "---\nkeyword: ;s\ntype: script\n---\necho ok\n".write(to: url, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: url.path)
+        return (directory, url)
+    }
+
+    @Test func privateFilePasses() async throws {
+        let (directory, url) = try file(mode: 0o644)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let snippet = Snippet(keyword: ";s", name: "S", body: "echo ok\n", url: url, source: .inlineScript)
+        #expect(try await SnippetRunner.resolve(snippet) == "ok")
+    }
+
+    @Test func groupWritableSnippetIsRefused() async throws {
+        let (directory, url) = try file(mode: 0o664)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let snippet = Snippet(keyword: ";s", name: "S", body: "echo ok\n", url: url, source: .inlineScript)
+        do {
+            _ = try await SnippetRunner.resolve(snippet)
+            Issue.record("expected refusal")
+        } catch let failure as SnippetRunner.Failure {
+            #expect(failure.description.hasSuffix("is writable by group or others"))
+        }
+    }
+
+    @Test func worldWritableScriptFileIsRefused() async throws {
+        let (directory, url) = try file(mode: 0o644)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let script = directory.appendingPathComponent("run.sh")
+        try "#!/bin/sh\necho ok\n".write(to: script, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o777], ofItemAtPath: script.path)
+
+        let snippet = Snippet(keyword: ";s", name: "S", body: "", url: url, source: .scriptFile(script))
+        await #expect(throws: SnippetRunner.Failure.self) {
+            try await SnippetRunner.resolve(snippet)
+        }
+    }
+
+    @Test func rootOwnedFilesPass() throws {
+        try SnippetRunner.checkOwnership(of: URL(fileURLWithPath: "/bin/sh"))
+    }
+}
