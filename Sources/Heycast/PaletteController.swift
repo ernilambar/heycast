@@ -109,6 +109,8 @@ final class PaletteController: NSObject, NSWindowDelegate {
         ) { _, error in
             if let error {
                 NSLog("Heycast: could not open %@: %@", app.name, error.localizedDescription)
+            } else {
+                UsageStore.shared.recordLaunch(of: app)
             }
         }
     }

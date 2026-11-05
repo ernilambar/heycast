@@ -7,6 +7,10 @@ struct LaunchableApp: Identifiable, Hashable, Sendable {
     let bundleIdentifier: String?
 
     var id: URL { url }
+
+    /// Stable identity for persisted usage: the bundle identifier survives the
+    /// app moving between folders, the path is the fallback for bare bundles.
+    var usageKey: String { bundleIdentifier ?? url.path }
 }
 
 /// Builds the list of launchable applications from the usual install roots.
@@ -145,62 +149,98 @@ enum ApplicationCatalog {
     }
 }
 
-/// Ranks application names for the palette: exact, prefix, word prefix,
-/// acronym, substring, then loose subsequence matches.
+/// Ranks application names for the palette: exact, prefix, acronym, word
+/// prefix, substring, then loose subsequence matches. Usage breaks ties inside
+/// a tier, and drives ordering entirely when the query is empty.
 enum ApplicationSearch {
-    static func rank(_ apps: [LaunchableApp], matching rawQuery: String) -> [LaunchableApp] {
+    static func rank(
+        _ apps: [LaunchableApp],
+        matching rawQuery: String,
+        usage: UsageRanking = .empty
+    ) -> [LaunchableApp] {
         let query = folded(rawQuery.trimmingCharacters(in: .whitespacesAndNewlines))
-        guard !query.isEmpty else { return apps }
+
+        guard !query.isEmpty else {
+            return apps
+                .map { (app: $0, usageScore: usage.score(for: $0)) }
+                .sorted { lhs, rhs in
+                    if lhs.usageScore != rhs.usageScore {
+                        return lhs.usageScore > rhs.usageScore
+                    }
+                    return isOrderedBefore(lhs.app, rhs.app)
+                }
+                .map(\.app)
+        }
 
         return apps
-            .compactMap { app -> (app: LaunchableApp, score: Int)? in
-                guard let score = matchScore(candidate: app.name, query: query) else {
+            .compactMap { app -> (app: LaunchableApp, match: NameMatch, usageScore: Double)? in
+                guard let match = nameMatch(candidate: app.name, query: query) else {
                     return nil
                 }
-                return (app, score)
+                return (app, match, usage.score(for: app))
             }
             .sorted { lhs, rhs in
-                if lhs.score != rhs.score {
-                    return lhs.score < rhs.score
+                if lhs.match.tier != rhs.match.tier {
+                    return lhs.match.tier < rhs.match.tier
                 }
-                let comparison = lhs.app.name.localizedStandardCompare(rhs.app.name)
-                if comparison == .orderedSame {
-                    return lhs.app.url.path < rhs.app.url.path
+                if lhs.usageScore != rhs.usageScore {
+                    return lhs.usageScore > rhs.usageScore
                 }
-                return comparison == .orderedAscending
+                if lhs.match.detail != rhs.match.detail {
+                    return lhs.match.detail < rhs.match.detail
+                }
+                return isOrderedBefore(lhs.app, rhs.app)
             }
             .map(\.app)
     }
 
-    private static func matchScore(candidate rawCandidate: String, query: String) -> Int? {
+    private struct NameMatch {
+        let tier: Int
+        let detail: Int
+    }
+
+    private static func nameMatch(candidate rawCandidate: String, query: String) -> NameMatch? {
         let candidate = folded(rawCandidate)
         guard !candidate.isEmpty else { return nil }
 
-        if candidate == query { return 0 }
+        if candidate == query {
+            return NameMatch(tier: 0, detail: 0)
+        }
         if candidate.hasPrefix(query) {
-            return 10 + candidate.count - query.count
+            return NameMatch(tier: 1, detail: candidate.count - query.count)
         }
 
         let words = words(in: rawCandidate).map(folded)
         if words.count > 1 {
             let initials = String(words.compactMap(\.first))
             if initials.hasPrefix(query) {
-                return 20 + candidate.count - query.count
+                return NameMatch(tier: 2, detail: candidate.count - query.count)
             }
         }
 
         if let wordIndex = words.firstIndex(where: { $0.hasPrefix(query) }) {
-            return 30 + wordIndex
+            return NameMatch(tier: 3, detail: wordIndex)
         }
 
         if let range = candidate.range(of: query) {
-            return 40 + candidate.distance(from: candidate.startIndex, to: range.lowerBound)
+            return NameMatch(
+                tier: 4,
+                detail: candidate.distance(from: candidate.startIndex, to: range.lowerBound)
+            )
         }
 
         if let gaps = subsequenceGaps(candidate: candidate, query: query) {
-            return 100 + gaps
+            return NameMatch(tier: 5, detail: gaps)
         }
         return nil
+    }
+
+    private static func isOrderedBefore(_ lhs: LaunchableApp, _ rhs: LaunchableApp) -> Bool {
+        let comparison = lhs.name.localizedStandardCompare(rhs.name)
+        if comparison == .orderedSame {
+            return lhs.url.path < rhs.url.path
+        }
+        return comparison == .orderedAscending
     }
 
     private static func folded(_ string: String) -> String {

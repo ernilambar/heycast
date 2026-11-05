@@ -39,8 +39,15 @@ and `~/Applications`, including symlinked bundles such as Safari. The scan runs
 in the background the first time the palette opens and is cached for the rest
 of the process.
 
-- type to filter by name; exact, prefix, word-prefix, acronym, substring and
-  subsequence matches rank in that order
+- type to filter by name; exact, prefix, acronym, word-prefix, substring and
+  subsequence matches rank in that order, with usage breaking ties inside a
+  tier
+- with no query, frequently and recently launched apps come first, then the
+  rest alphabetically
+- launch counts and recency persist in
+  `~/Library/Application Support/com.nilambar.heycast/usage.json`; the score
+  damps raw counts logarithmically and halves every 30 days without a launch,
+  and history is capped at the 200 most recently used apps
 - `↑`/`↓` moves the selection, `↩` launches it
 - clicking a row launches that app
 - the panel grows from one to seven visible rows, then scrolls
@@ -85,6 +92,7 @@ Sources/Heycast/
   PaletteController.swift NSPanel configuration, placement, resize, launching
   PaletteView.swift      SwiftUI palette content, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking
+  UsageStore.swift       persisted launch counts and recency, usage scoring
   HotKeyController.swift global ⌥Space via Carbon RegisterEventHotKey
   Permission.swift       TCC permissions: status checks, requests, panes
   PermissionWizardModel.swift  wizard steps, refresh on app activation
@@ -108,4 +116,3 @@ with its top edge offset 20% from the top. It is `nonactivatingPanel` +
   under the Accessibility grant
 - More result sources: windows, files, system settings and commands alongside
   applications
-- Usage-based ranking that remembers frequently launched apps

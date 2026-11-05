@@ -13,14 +13,21 @@ final class PaletteModel: ObservableObject {
     @Published private(set) var selectionIndex = 0
     @Published private(set) var isLoading = false
 
+    private let usageStore: UsageStore
+    private var usage = UsageRanking.empty
     private var applications: [LaunchableApp] = []
     private var hasLoadedApplications = false
+
+    init(usageStore: UsageStore = .shared) {
+        self.usageStore = usageStore
+    }
 
     var selected: LaunchableApp? {
         results.indices.contains(selectionIndex) ? results[selectionIndex] : nil
     }
 
     func reset() {
+        usage = usageStore.ranking()
         query = ""
         selectionIndex = 0
         updateResults()
@@ -52,7 +59,7 @@ final class PaletteModel: ObservableObject {
     }
 
     private func updateResults() {
-        results = ApplicationSearch.rank(applications, matching: query)
+        results = ApplicationSearch.rank(applications, matching: query, usage: usage)
         selectionIndex = 0
     }
 }
