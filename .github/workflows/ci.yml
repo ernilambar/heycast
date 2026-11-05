@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The signing gate is manual: its secrets sit behind the `release`
+  # environment's required reviewer, and it has nothing to check on a code
+  # change. Use it before a tag, or whenever the certificate might have moved.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,3 +22,50 @@ jobs:
         run: swift --version
       - name: Run unit tests
         run: make test
+
+  # Phase 0 exit gate: two builds with the same identity produce the same
+  # designated requirement, and that requirement matches the committed one.
+  # A drift here means `brew upgrade` would revoke Accessibility for every
+  # existing install, so it is checked outside the release tag too.
+  signing:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import signing identity
+        env:
+          HEYCAST_P12: ${{ secrets.HEYCAST_P12 }}
+          HEYCAST_P12_PASSWORD: ${{ secrets.HEYCAST_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: ./scripts/ci-import-identity.sh
+
+      - name: Build twice and compare the designated requirement
+        run: |
+          set -euo pipefail
+          requirement() {
+            codesign -d -r- dist/Heycast.app 2>&1 | sed -n 's/^designated => //p'
+          }
+
+          make bundle-release
+          first="$(requirement)"
+          echo "first build:  $first"
+
+          # Same inputs, same identity: the requirement must reproduce exactly.
+          make bundle-release
+          second="$(requirement)"
+          echo "second build: $second"
+
+          expected="$(tr -d '\n' < Resources/release-identity.txt)"
+
+          if [ "$first" != "$second" ]; then
+            echo "::error::two builds produced different designated requirements"
+            exit 1
+          fi
+          if [ "$first" != "$expected" ]; then
+            echo "::error::designated requirement does not match Resources/release-identity.txt"
+            echo "  expected: $expected"
+            exit 1
+          fi
+          echo "both builds match the committed requirement"

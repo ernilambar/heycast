@@ -6,6 +6,10 @@
 # A stable identity keeps TCC grants across rebuilds; see assemble_bundle in
 # scripts/lib.sh, which picks this identity up automatically. Safe to rerun:
 # an existing identity is left alone.
+#
+# This is the development identity only. Published builds are signed with the
+# separate "Heycast" identity from scripts/release-cert.sh; never reuse this one
+# for a release, and never point a release at it.
 set -euo pipefail
 
 name="Heycast Dev"

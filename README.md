@@ -1,9 +1,11 @@
 # heycast
 
-A macOS launcher palette and window manager. Press `⌘Space` anywhere, type a
-few letters, hit `↩`, and the app you meant opens. Press `⌥Space` to search
-snippets only. `⌃⌥` plus an arrow snaps the focused window. Heycast lives in
-the menu bar — no Dock icon, no main window.
+A menu-bar launcher for everyday Mac work: one shortcut opens apps, pastes
+snippets, and snaps windows; nothing leaves your Mac and there is no account.
+
+Press `⌘Space` anywhere, type a few letters, hit `↩`, and the app you meant
+opens. Press `⌥Space` to search snippets only. `⌃⌥` plus an arrow snaps the
+focused window. Heycast lives in the menu bar — no Dock icon, no main window.
 
 ## Install
 

@@ -53,7 +53,8 @@ struct AboutView: View {
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
 
-                Text("A launcher palette and window manager for macOS.")
+                // The one-sentence positioning; see docs/positioning.md.
+                Text("A menu-bar launcher for everyday Mac work.")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

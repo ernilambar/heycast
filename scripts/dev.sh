@@ -47,6 +47,7 @@ for arg in "$@"; do
 done
 
 require_macos_arm64
+resolve_sign_identity
 
 config="debug"
 if $release; then
@@ -61,6 +62,7 @@ if $release; then
 fi
 
 printf '==> bundle\n'
+printf 'signing identity: %s\n' "$sign_identity"
 mkdir -p "$root/dist"
 assemble_bundle "$config"
 

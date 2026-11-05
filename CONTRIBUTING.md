@@ -1,7 +1,9 @@
 # Contributing to heycast
 
 Developer notes: build, test, layout, CI and the system-level details that only
-matter while developing. For what the app does, see [README.md](README.md).
+matter while developing. For what the app does, see [README.md](README.md); for
+the one-sentence positioning and the scope it rules out, see
+[docs/positioning.md](docs/positioning.md).
 
 ## Requirements
 
@@ -14,9 +16,11 @@ matter while developing. For what the app does, see [README.md](README.md).
 make run               # debug build, install to /Applications, launch
 make test              # unit tests (Swift Testing)
 make bundle            # release .app, -macos-arm64.zip and SHA256SUMS under dist/
+make bundle-release    # the same bundle, signing with the release identity only
 make stop              # quit a running instance
 make reset-permissions # clear TCC answers + the first-run flag
 make dev-cert          # one-time: stable signing identity so grants survive rebuilds
+make release-cert      # one-time: the "Heycast" identity that signs every release
 make clean
 ```
 
@@ -97,6 +101,8 @@ snippet body.
   signature, so rebuilds re-prompt. Run `make dev-cert` once: it creates a
   self-signed "Heycast Dev" identity that the scripts use automatically, so
   grants survive `make run`. `HEYCAST_SIGN_IDENTITY` overrides the identity.
+  The dev identity is for local builds only; releases use "Heycast" (see
+  [Release signing](#release-signing)).
   After creating it (or switching identity), run `make reset-permissions` and
   grant again: an existing grant still points at the old signature, so it
   shows ON in System Settings but does not apply.
@@ -114,22 +120,112 @@ generated from it and committed, so a build needs no renderer.
 `Contents/Resources`. After editing the SVG, run `./scripts/icon.sh` (
 `sips` rasterizes the SVG, `iconutil` packs every size) and rebuild.
 
+## Release signing
+
+Two identities exist, and they never mix:
+
+| Identity | Used by | Created by |
+| --- | --- | --- |
+| `Heycast Dev` | `make run`, `make bundle` on a developer machine | `make dev-cert` |
+| `Heycast` | every published build, CI only | `make release-cert` |
+
+`Heycast` is a self-signed certificate with a ten-year validity and the
+code-signing EKU. macOS keys Privacy & Security grants to the signature, so
+this one certificate is the TCC key for every installed copy: rotating it
+changes the designated requirement and silently resets Accessibility for all
+users at the next `brew upgrade`. Keep one identity for the life of the 0.x
+line.
+
+### The designated requirement
+
+`Resources/release-identity.txt` is the requirement the identity produces:
+
+```text
+identifier "net.nilambar.heycast" and certificate leaf = H"…"
+```
+
+It is committed, and `scripts/bundle.sh --release` fails when a build's
+requirement differs from it. That is deliberately a build failure, not a
+warning: a mismatch means the certificate was recreated, and shipping it
+would revoke every existing grant. Only rewrite the file with
+`./scripts/release-cert.sh --record` when the rotation is intentional, and
+say so in the release notes so users know to grant Accessibility again.
+
+### Creating the identity (once)
+
+```sh
+make release-cert     # creates "Heycast", exports .p12, records the requirement
+```
+
+The .p12 and its password go to `~/.heycast/release/` (`chmod 600`), never into
+the repository; `.gitignore` blocks `*.p12`, `*.pem` and `*.keychain*` anyway.
+
+**Back that folder up somewhere that outlives this Mac** — a password manager,
+an encrypted disk, or both. If the keychain is wiped and the backup is gone,
+the certificate has to be recreated, and the next release resets Accessibility
+for everyone.
+
+Then store the three secrets on the `release` environment of the GitHub
+repository (it has a required reviewer, so publishing waits for a human):
+
+```sh
+base64 -i ~/.heycast/release/heycast.p12 | gh secret set HEYCAST_P12 --env release
+gh secret set HEYCAST_P12_PASSWORD --env release < ~/.heycast/release/password.txt
+gh secret set KEYCHAIN_PASSWORD --env release < ~/.heycast/release/keychain-password.txt
+```
+
+To sign on a second machine, import the backup instead of recreating it:
+
+```sh
+security import ~/.heycast/release/heycast.p12 -k login.keychain-db \
+  -P "$(cat ~/.heycast/release/password.txt)" -T /usr/bin/codesign
+```
+
+### Checking a build
+
+```sh
+make bundle-release
+codesign -d -r- dist/Heycast.app    # must equal Resources/release-identity.txt
+codesign -dv dist/Heycast.app       # must say Authority=Heycast
+```
+
+The manual **signing** job in `.github/workflows/ci.yml` does the same thing in
+CI and builds twice to prove the requirement reproduces. Run it from the
+Actions tab (`workflow_dispatch`) before a tag, or after touching anything that
+signs.
+
+`spctl` rejects the app by design because it is not notarized. Do not gate on
+it; the cask clears the quarantine flag instead.
+
 ## Releasing
+
+Cadence is per phase, not per calendar: a release ships when a phase in the
+plan is done and has met its acceptance criteria. Versions follow semantic
+versioning, stay `0.x` through the planned phases, and each tag needs a
+`CHANGELOG.md` entry. There is no beta channel and no in-app updater.
 
 `Resources/Info.plist` owns the version: `CFBundleShortVersionString` is the
 release version and `CFBundleVersion` its build number. Nothing else stores it,
 so a bump is a single-file change.
 
 1. Bump both keys in `Resources/Info.plist`.
-2. Run `make test && make bundle` and check `dist/` by hand.
-3. Commit, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main vX.Y.Z`.
+2. Move the `## [Unreleased]` items into a new `## [X.Y.Z] - YYYY-MM-DD`
+   section in [CHANGELOG.md](CHANGELOG.md).
+3. Run `make test && make bundle` and check `dist/` by hand. To test the exact
+   CI path, run the signing job from the Actions tab first.
+4. Commit, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main vX.Y.Z`.
 
-Pushing the tag runs `.github/workflows/release.yml`. It rejects a tag whose
-version differs from the plist, runs the tests, builds the bundle, and
-publishes `Heycast-macos-arm64.zip` and `SHA256SUMS` on the GitHub release.
+Pushing the tag runs `.github/workflows/release.yml`. It waits for approval on
+the `release` environment, then rejects a tag whose version differs from the
+plist, rejects a tag with no `CHANGELOG.md` section, runs the tests, imports the
+`Heycast` identity from the environment secrets, builds with signing enforced,
+checks the designated requirement, and publishes `Heycast-macos-arm64.zip` and
+`SHA256SUMS` on the GitHub release. A missing or mismatched certificate fails
+the job; the release path never falls back to ad-hoc signing.
+
 The tag carries a `v` prefix; the plist keeps the bare version. The release
 title is the tag alone, e.g. `v0.1.0`, and the body is `CFBundleName` plus the
-tag, e.g. `Heycast v0.1.0`.
+tag, linking to `CHANGELOG.md` for the details.
 
 ## Layout
 
@@ -158,16 +254,22 @@ Sources/Heycast/
   AboutView.swift        About panel content and version formatting
   AboutController.swift  About window lifecycle
 Resources/Info.plist     LSUIElement, bundle metadata, TCC usage strings
+Resources/release-identity.txt  designated requirement every release must match
 Resources/AppIcon.svg    app icon source, 1024x1024
 Resources/AppIcon.icns   generated icon bundled as Contents/Resources/AppIcon.icns
 scripts/icon.sh          regenerate AppIcon.icns from AppIcon.svg
-scripts/lib.sh           plist metadata + bundle assembly, shared by the scripts
+scripts/lib.sh           plist metadata, signing identity, bundle assembly, shared by the scripts
 scripts/dev.sh           debug/release build, install to /Applications, relaunch
 scripts/bundle.sh        release gate, bundle, zip archive, SHA256SUMS
+scripts/dev-cert.sh      create the local "Heycast Dev" signing identity
+scripts/release-cert.sh  create/export the "Heycast" release identity
+scripts/ci-import-identity.sh  import the release identity from CI secrets
 Makefile                 thin wrappers around the scripts
 Tests/HeycastTests/      Swift Testing suites for the pure logic
-.github/workflows/ci.yml test workflow, macOS runner
+.github/workflows/ci.yml test workflow, macOS runner, manual signing gate
 .github/workflows/release.yml  tag-triggered release, publishes the bundle
+docs/positioning.md      the one-sentence positioning and what it rules out
+CHANGELOG.md             release notes; the only source for them
 LICENSE                  MIT
 ```
 

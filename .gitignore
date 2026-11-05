@@ -2,3 +2,11 @@
 dist/
 .swiftpm/
 .DS_Store
+
+# Signing material must never enter the repository: the release key lives in
+# ~/.heycast/release and in GitHub Actions secrets. See CONTRIBUTING.md.
+*.p12
+*.key
+*.pem
+*.keychain
+*.keychain-db

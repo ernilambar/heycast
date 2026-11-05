@@ -10,6 +10,10 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    # The signing secrets live on this environment so publishing a tag waits for
+    # a human. A release is irreversible for users: `brew upgrade` replaces the
+    # app, and a rotated identity silently revokes their Accessibility grant.
+    environment: release
     steps:
       - uses: actions/checkout@v4
 
@@ -24,11 +28,52 @@ jobs:
             exit 1
           fi
 
+      # CHANGELOG.md is the only release-notes source, so a tag without an entry
+      # would publish a release nobody can read.
+      - name: Verify CHANGELOG has an entry
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          if ! grep -q "^## \[$tag_version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$tag_version]' section"
+            exit 1
+          fi
+
       - name: Run unit tests
         run: make test
 
+      # The release path never falls back to ad-hoc signing: a new CDHash on
+      # every update makes macOS re-ask for Accessibility, which users read as
+      # a permissions bug. Missing identity, missing keychain secrets and a
+      # signing failure are all hard errors.
+      - name: Import signing identity
+        env:
+          HEYCAST_P12: ${{ secrets.HEYCAST_P12 }}
+          HEYCAST_P12_PASSWORD: ${{ secrets.HEYCAST_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: ./scripts/ci-import-identity.sh
+
+      # --release signs with "Heycast" or fails, and compares the designated
+      # requirement with Resources/release-identity.txt.
       - name: Build release artifacts
-        run: make bundle
+        run: make bundle-release
+
+      - name: Verify signing identity and designated requirement
+        run: |
+          set -euo pipefail
+          app=dist/Heycast.app
+          expected="$(tr -d '\n' < Resources/release-identity.txt)"
+          actual="$(codesign -d -r- "$app" 2>&1 | sed -n 's/^designated => //p')"
+          echo "designated requirement: $actual"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::designated requirement changed; Accessibility grants will reset"
+            echo "  expected: $expected"
+            echo "  actual:   $actual"
+            exit 1
+          fi
+          if ! codesign -dv "$app" 2>&1 | grep -qx 'Authority=Heycast'; then
+            echo "::error::$app is not signed by the Heycast identity"
+            exit 1
+          fi
 
       - name: Publish release
         env:
@@ -39,4 +84,4 @@ jobs:
             dist/Heycast-macos-arm64.zip \
             dist/SHA256SUMS \
             --title "$GITHUB_REF_NAME" \
-            --notes "$app_name $GITHUB_REF_NAME"
+            --notes "$app_name $GITHUB_REF_NAME. Release notes: [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/main/CHANGELOG.md)."

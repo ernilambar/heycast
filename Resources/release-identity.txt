@@ -1,0 +1,1 @@
+identifier "net.nilambar.heycast" and certificate leaf = H"3550db1a2d425e0784cb00c7e10d8bf350c10172"
