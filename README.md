@@ -34,7 +34,8 @@ from Launchpad or Finder.
   [docs/keymaps.md](docs/keymaps.md).
 - Click the menu-bar item to toggle the full palette.
 - Right-click the menu-bar item for "Open Palette", "Open Snippets",
-  "Window", "Edit Config…", "Permissions…" and "Quit Heycast".
+  "Window", "Edit Config…", "Permissions…", "About Heycast" and
+  "Quit Heycast".
 - `↑`/`↓` moves the selection, `↩` launches the selected app or pastes the
   selected snippet, clicking a row does the same, `esc` or focusing another app
   closes the palette.

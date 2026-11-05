@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let palette = PaletteController()
     private let permissions = PermissionWizardController()
+    private let about = AboutController()
     private let windowManager = WindowManager()
     private var hotKeyControllers: [KeymapAction: HotKeyController] = [:]
     private var keymap = Keymap.default
@@ -162,6 +163,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ).target = self
         menu.addItem(.separator())
         menu.addItem(
+            withTitle: "About Heycast",
+            action: #selector(openAbout),
+            keyEquivalent: ""
+        ).target = self
+        menu.addItem(.separator())
+        menu.addItem(
             withTitle: "Quit Heycast",
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
@@ -203,6 +210,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openPermissions() {
         permissions.show()
+    }
+
+    @objc private func openAbout() {
+        about.show()
     }
 
     /// Seeds a template on first use and hands the file to the default editor.

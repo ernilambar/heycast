@@ -155,6 +155,8 @@ Sources/Heycast/
   PermissionWizardModel.swift  wizard steps, refresh on app activation
   PermissionWizardView.swift   wizard pages + summary
   PermissionWizardController.swift  setup window lifecycle
+  AboutView.swift        About panel content and version formatting
+  AboutController.swift  About window lifecycle
 Resources/Info.plist     LSUIElement, bundle metadata, TCC usage strings
 Resources/AppIcon.svg    app icon source, 1024x1024
 Resources/AppIcon.icns   generated icon bundled as Contents/Resources/AppIcon.icns
