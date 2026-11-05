@@ -12,10 +12,15 @@ launcher-style palette, focuses a text field, and reports back what you type.
 ## Build & run
 
 ```sh
-make run     # build, bundle into .build/Heycast.app, launch
-make stop    # quit an already running instance
+make run     # debug build, install to /Applications, launch
+make bundle  # release .app, -macos-arm64.zip and SHA256SUMS under dist/
+make stop    # quit a running instance
 make clean
 ```
+
+Both scripts build only `darwin/arm64` and refuse to run on other hosts.
+
+`./scripts/dev.sh --release` installs a release build the same way.
 
 The app is an accessory (`LSUIElement`) app: no Dock icon, one status-bar
 item. Click it to open the palette.
@@ -33,7 +38,10 @@ Sources/Heycast/
   PaletteController.swift NSPanel configuration, placement, esc/click-away
   PaletteView.swift      SwiftUI palette content + model
 Resources/Info.plist     LSUIElement, bundle metadata
-Makefile                 swift build + .app bundle assembly
+scripts/lib.sh           plist metadata + bundle assembly, shared by the scripts
+scripts/dev.sh           debug/release build, install to /Applications, relaunch
+scripts/bundle.sh        release gate, bundle, zip archive, SHA256SUMS
+Makefile                 thin wrappers around the scripts
 ```
 
 The panel is transparent and borderless, sized 620×132, centered on the
