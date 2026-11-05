@@ -24,6 +24,8 @@ from Launchpad or Finder.
 - `↑`/`↓` moves the selection, `↩` launches the selected app or pastes the
   selected snippet, clicking a row does the same, `esc` or focusing another app
   closes the palette.
+- Typing a snippet keyword in any app expands it in place; this needs
+  Accessibility.
 
 ## Search
 
@@ -86,7 +88,7 @@ All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
 ## Snippets
 
 A snippet is a Markdown file in the snippets folder. The front matter gives it
-a keyword and a title; the body is the text that gets pasted.
+a keyword and a title; the body is the text that gets pasted or expanded.
 
 ```markdown
 ---
@@ -100,23 +102,30 @@ Nilambar
 
 - `keyword` is required and is what the palette matches on; `name` is optional
   and defaults to the keyword.
-- Files are re-read every time the palette opens, so an edit shows up at once.
+- Typing a keyword in any app expands it in place. Matching is exact and
+  case-sensitive; typing `;sig` replaces it with the body immediately.
+- If one keyword is a prefix of another, the shorter one waits instead of
+  stealing the longer trigger.
+- Files are re-read every time the palette opens and when the snippets folder
+  changes, so an edit shows up without restarting.
 - The snippets shortcut opens the same panel with applications filtered out;
   typing still searches snippets by keyword and name.
 - Files without front matter, without a keyword, or with an empty body are
   skipped and logged.
 - Snippets are found by keyword and by name with the same ranking as apps; with
   an empty query they follow the applications, ordered by keyword.
-- Pasting types ⌘V into the app that was frontmost before the palette opened,
-  which is what needs Accessibility. Without the grant the text is still copied
-  to the clipboard.
+- Pasting types ⌘V into the app that was frontmost before the palette opened;
+  inline expansion deletes the typed keyword and types ⌘V into the current app.
+  Both need Accessibility. Without the grant, palette activation still copies
+  the body to the clipboard.
 
 ## Permissions
 
-Heycast asks for one grant: **Accessibility**, used by snippets to paste into
-the app in front by typing ⌘V for you. The first-run wizard explains it,
-shows the real system state, raises the consent prompt and links to the
-matching System Settings pane. Reopen it any time from "Permissions…".
+Heycast asks for one grant: **Accessibility**, used for inline snippet
+expansion and for pasting snippets into the app in front by typing ⌘V for you.
+The first-run wizard explains it, shows the real system state, raises the
+consent prompt and links to the matching System Settings pane. Reopen it any
+time from "Permissions…".
 
 The global hotkeys (`⌃Space` and `⌃⇧Space` by default) need no grant. Heycast
 does not ask for Microphone, Speech Recognition, Input Monitoring, Screen

@@ -1,7 +1,6 @@
 import AppKit
 import ApplicationServices
 import Combine
-import CoreGraphics
 import SwiftUI
 
 /// Borderless floating panel that can take keyboard focus without dragging
@@ -163,22 +162,8 @@ final class PaletteController: NSObject, NSWindowDelegate {
         // The target needs a moment to become key again; posting the keystroke
         // immediately would send it to Heycast or to the outgoing window.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            Self.postPasteKeystroke()
+            SyntheticKeyboard.postPaste()
         }
-    }
-
-    private static func postPasteKeystroke() {
-        let source = CGEventSource(stateID: .combinedSessionState)
-        let vKey: CGKeyCode = 9
-
-        guard let down = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false) else {
-            return
-        }
-        down.flags = .maskCommand
-        up.flags = .maskCommand
-        down.post(tap: .cghidEventTap)
-        up.post(tap: .cghidEventTap)
     }
 
     // MARK: - Keyboard

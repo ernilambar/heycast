@@ -8,22 +8,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let permissions = PermissionWizardController()
     private var hotKeyControllers: [KeymapAction: HotKeyController] = [:]
     private var keymap = Keymap.default
+    private var snippetExpander: SnippetExpander?
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let config = AppConfig.load()
         installStatusItem()
         installKeymap(config.resolvedKeymap())
-        logSnippetsDirectory(config)
+        let snippetsDirectory = logSnippetsDirectory(config)
+        snippetExpander = SnippetExpander(directory: snippetsDirectory) { [weak self] in
+            guard let self else { return false }
+            return !self.palette.isVisible && !self.permissions.isVisible
+        }
+        snippetExpander?.startIfNeeded()
         showWizardOnFirstLaunch()
     }
 
-    /// Resolves the snippets folder once per launch, so the menu and the
-    /// palette cannot disagree on one path.
-    private func logSnippetsDirectory(_ config: AppConfig) {
+    /// The wizard sends the user to System Settings; retry the tap when they
+    /// return so a new Accessibility grant takes effect without a relaunch.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        snippetExpander?.startIfNeeded()
+    }
+
+    /// Resolves the snippets folder once per launch, so the menu, the palette
+    /// and the expander cannot disagree on one path.
+    @discardableResult
+    private func logSnippetsDirectory(_ config: AppConfig) -> URL {
         let directory = config.snippetsDirectoryURL()
         let count = SnippetLibrary.load(from: directory).count
         NSLog("Heycast: snippets directory: %@ (%d snippets)", directory.path, count)
+        return directory
     }
 
     private func installKeymap(_ keymap: Keymap) {

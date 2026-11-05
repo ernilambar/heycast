@@ -73,17 +73,18 @@ hotkey.
 
 ## Permissions while developing
 
-The app needs one grant today: **Accessibility**, used by snippets to type ⌘V
-into the app in front after the palette copies the snippet body.
+The app needs one grant today: **Accessibility**, used for inline snippet
+expansion and for typing ⌘V into the app in front after the palette copies a
+snippet body.
 
 - The global hotkeys need no grant: Carbon `RegisterEventHotKey` is delivered
   by the window server.
 - Microphone and Speech Recognition are not asked for because no audio exists.
   Add them with the voice feature — and Speech only if transcription uses
   Apple's `SFSpeechRecognizer` rather than a remote model.
-- Input Monitoring is not needed: a keyword event tap that can modify events
-  (snippets must swallow the trigger) is authorized by Accessibility. Only a
-  listen-only tap would need it.
+- Input Monitoring is not needed: typed-keyword expansion uses a keyboard
+  event tap that can modify events, which Accessibility authorizes. Only a
+  listen-only tap would need Input Monitoring.
 - Screen Recording and Full Disk Access are not asked for; nothing reads the
   screen or protected files such as Mail, Messages and Safari.
 - System prompts only appear for a bundled, `/Applications`-installed app;
@@ -112,6 +113,8 @@ Sources/Heycast/
   PaletteView.swift      SwiftUI palette content, scope, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking
   Snippet.swift          snippet front matter, folder loading
+  SnippetExpander.swift  typed-keyword matching and expansion event tap
+  SyntheticKeyboard.swift synthesized backspaces and ⌘V for snippets
   PaletteSearch.swift    merged app + snippet ranking for the palette
   UsageStore.swift       persisted launch counts and recency, usage scoring
   HotKeyController.swift global hotkeys via Carbon RegisterEventHotKey
@@ -131,10 +134,11 @@ Tests/HeycastTests/      Swift Testing suites for the pure logic
 ## Tests
 
 `make test` runs the Swift Testing suites in `Tests/HeycastTests/`: search
-ranking, snippet parsing and merged palette ranking, usage scoring and
-persistence, config path resolution and keymap resolution, and launch history
-pruning. These cover the pure logic; the panel, hotkey registration and TCC
-code are not unit-tested because they need real UI/system state.
+ranking, snippet parsing and keyword matching, merged palette ranking, usage
+scoring and persistence, config path resolution and keymap resolution, and
+launch history pruning. These cover the pure logic; the panel, event tap,
+hotkey registration and TCC code are not unit-tested because they need real
+UI/system state.
 
 The test target depends on the executable target and imports it with
 `@testable`, so the app needs no separate library target. Swift Testing ships
@@ -147,7 +151,5 @@ CI (`.github/workflows/ci.yml`) runs the suite on `macos-15` for pushes to
 
 ## Next
 
-- Snippets: typed-keyword expansion in place; palette paste already works.
-  Needs an event tap authorized by Accessibility.
 - More result sources: windows, files, system settings and commands alongside
   applications
