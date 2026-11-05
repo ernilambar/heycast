@@ -75,15 +75,7 @@ final class UsageStore: @unchecked Sendable {
     // MARK: - Persistence
 
     private static func defaultFileURL() -> URL {
-        let base = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first ?? FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support", isDirectory: true)
-        let namespace = Bundle.main.bundleIdentifier ?? "Heycast"
-        return base
-            .appendingPathComponent(namespace, isDirectory: true)
-            .appendingPathComponent("usage.json")
+        SupportDirectory.usageFile
     }
 
     private static func load(from url: URL) -> [String: AppUsage] {
