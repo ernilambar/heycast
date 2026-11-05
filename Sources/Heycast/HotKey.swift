@@ -16,15 +16,15 @@ struct HotKey: Hashable, Sendable {
 
     static let `default` = HotKey(
         keyCode: UInt32(kVK_Space),
-        modifiers: UInt32(controlKey),
+        modifiers: UInt32(cmdKey),
         keyEquivalent: " ",
         keyName: "Space"
     )
 
-    /// `⌃⇧Space` opens the palette limited to snippets.
+    /// `⌥Space` opens the palette limited to snippets.
     static let snippetDefault = HotKey(
         keyCode: UInt32(kVK_Space),
-        modifiers: UInt32(controlKey) | UInt32(shiftKey),
+        modifiers: UInt32(optionKey),
         keyEquivalent: " ",
         keyName: "Space"
     )

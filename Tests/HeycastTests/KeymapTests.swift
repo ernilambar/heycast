@@ -37,7 +37,7 @@ import Testing
 
     @Test func duplicateShortcutKeepsFirstAction() {
         let keymap = AppConfig(
-            keymaps: ["palette": "ctrl+space", "snippets": "ctrl+space"]
+            keymaps: ["palette": "cmd+space", "snippets": "cmd+space"]
         ).resolvedKeymap()
 
         #expect(keymap[.palette] == .default)
@@ -94,7 +94,7 @@ import Testing
 
     @Test func windowActionCannotStealAnEarlierAction() {
         let keymap = AppConfig(
-            keymaps: ["window.left": "ctrl+space"]
+            keymaps: ["window.left": "cmd+space"]
         ).resolvedKeymap()
 
         #expect(keymap[.palette] == .default)

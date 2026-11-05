@@ -26,8 +26,8 @@ Both scripts build only `darwin/arm64` and refuse to run on other hosts.
 
 The app is an accessory (`LSUIElement`) app: no Dock icon, one status-bar item.
 SwiftUI content is hosted in a borderless floating `NSPanel` that toggles from
-the status-bar item, the palette hotkey (`⌃Space`), the snippets-only hotkey
-(`⌃⇧Space`) or the menu-bar menu.
+the status-bar item, the palette hotkey (`⌘Space`), the snippets-only hotkey
+(`⌥Space`) or the menu-bar menu.
 
 ## Panel
 
@@ -56,8 +56,8 @@ rather than nesting objects, so resolution remains a single
 ```json
 {
   "keymaps": {
-    "palette": "ctrl+space",
-    "snippets": "ctrl+shift+space",
+    "palette": "cmd+space",
+    "snippets": "alt+space",
     "window.left": "ctrl+alt+left",
     "window.right": "ctrl+alt+right",
     "window.top": "ctrl+alt+up",

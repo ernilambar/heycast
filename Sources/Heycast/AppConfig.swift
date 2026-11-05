@@ -6,7 +6,7 @@ import Foundation
 /// seeds a template the first time you open it.
 struct AppConfig: Decodable {
     /// Global shortcuts keyed by action name, e.g.
-    /// `{"palette": "ctrl+space", "snippets": "ctrl+shift+space"}`.
+    /// `{"palette": "cmd+space", "snippets": "alt+space"}`.
     /// An empty value disables an action. Unknown actions are logged and
     /// ignored; missing actions keep their built-in default.
     var keymaps: [String: String]?
@@ -150,8 +150,8 @@ extension AppConfig {
             ConfigTemplate(
                 comment: "Bind commands under keymaps by action name; an empty string disables one. Window commands are window.left, window.right, window.top, window.bottom, window.topLeft, window.topRight, window.bottomLeft, window.bottomRight, window.maximize and window.center. snippetsDirectory is optional. Restart Heycast after editing.",
                 keymaps: [
-                    "palette": "ctrl+space",
-                    "snippets": "ctrl+shift+space",
+                    "palette": "cmd+space",
+                    "snippets": "alt+space",
                     "window.left": "ctrl+alt+left",
                     "window.right": "ctrl+alt+right",
                     "window.top": "ctrl+alt+up",

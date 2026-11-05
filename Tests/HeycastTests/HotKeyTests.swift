@@ -4,19 +4,19 @@ import Testing
 @testable import Heycast
 
 @Suite struct HotKeyTests {
-    @Test func defaultIsControlSpace() {
+    @Test func defaultIsCommandSpace() {
         #expect(HotKey.default.keyCode == UInt32(kVK_Space))
-        #expect(HotKey.default.modifiers == UInt32(controlKey))
+        #expect(HotKey.default.modifiers == UInt32(cmdKey))
         #expect(HotKey.default.keyEquivalent == " ")
-        #expect(HotKey.default.displayString == "⌃Space")
-        #expect(HotKey.default.menuModifiers == [.control])
+        #expect(HotKey.default.displayString == "⌘Space")
+        #expect(HotKey.default.menuModifiers == [.command])
     }
 
-    @Test func snippetDefaultIsControlShiftSpace() {
+    @Test func snippetDefaultIsOptionSpace() {
         #expect(HotKey.snippetDefault.keyCode == UInt32(kVK_Space))
-        #expect(HotKey.snippetDefault.modifiers == UInt32(controlKey | shiftKey))
-        #expect(HotKey.snippetDefault.displayString == "⌃⇧Space")
-        #expect(HotKey.snippetDefault.menuModifiers == [.control, .shift])
+        #expect(HotKey.snippetDefault.modifiers == UInt32(optionKey))
+        #expect(HotKey.snippetDefault.displayString == "⌥Space")
+        #expect(HotKey.snippetDefault.menuModifiers == [.option])
     }
 
     @Test func parsesModifierAliasesCaseAndWhitespace() {

@@ -82,8 +82,8 @@ private func temporaryDirectory() throws -> URL {
         let seeded = AppConfig.load(from: file)
         #expect(seeded.snippetsDirectory != nil)
         #expect(seeded.keymaps == [
-            "palette": "ctrl+space",
-            "snippets": "ctrl+shift+space",
+            "palette": "cmd+space",
+            "snippets": "alt+space",
             "window.left": "ctrl+alt+left",
             "window.right": "ctrl+alt+right",
             "window.top": "ctrl+alt+up",

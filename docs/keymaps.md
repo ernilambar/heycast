@@ -6,8 +6,8 @@ name; each value is a shortcut string.
 ```json
 {
   "keymaps": {
-    "palette": "ctrl+space",
-    "snippets": "ctrl+shift+space",
+    "palette": "cmd+space",
+    "snippets": "alt+space",
     "window.topLeft": "ctrl+alt+1"
   }
 }
@@ -17,8 +17,8 @@ name; each value is a shortcut string.
 
 | Action | Default | Does |
 |---|---|---|
-| `palette` | `ctrl+space` | Toggle the full apps-and-snippets palette |
-| `snippets` | `ctrl+shift+space` | Open the palette with snippets only |
+| `palette` | `cmd+space` | Toggle the full apps-and-snippets palette |
+| `snippets` | `alt+space` | Open the palette with snippets only |
 | `window.left` | `ctrl+alt+left` | Fill the left half |
 | `window.right` | `ctrl+alt+right` | Fill the right half |
 | `window.top` | `ctrl+alt+up` | Fill the top half |

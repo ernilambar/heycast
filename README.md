@@ -1,7 +1,7 @@
 # heycast
 
-A macOS launcher palette and window manager. Press `⌃Space` anywhere, type a
-few letters, hit `↩`, and the app you meant opens. Press `⌃⇧Space` to search
+A macOS launcher palette and window manager. Press `⌘Space` anywhere, type a
+few letters, hit `↩`, and the app you meant opens. Press `⌥Space` to search
 snippets only. `⌃⌥` plus an arrow snaps the focused window. Heycast lives in
 the menu bar — no Dock icon, no main window.
 
@@ -15,8 +15,8 @@ from Launchpad or Finder.
 
 ## Use
 
-- `⌃Space` toggles the palette from any app.
-- `⌃⇧Space` opens the palette with snippets only.
+- `⌘Space` toggles the palette from any app.
+- `⌥Space` opens the palette with snippets only.
 - `⌃⌥` plus an arrow fills that half of the screen, `⌃⌥↩` maximizes and
   `⌃⌥C` centers the focused window. All shortcuts are configurable; see
   [docs/keymaps.md](docs/keymaps.md).
@@ -45,8 +45,8 @@ launch.
 ```json
 {
   "keymaps": {
-    "palette": "ctrl+space",
-    "snippets": "ctrl+shift+space"
+    "palette": "cmd+space",
+    "snippets": "alt+space"
   },
   "snippetsDirectory": "~/Documents/heycast-snippets"
 }

@@ -47,7 +47,7 @@ Nilambar
 | Way | How |
 |---|---|
 | Inline | Type the keyword in any app. It is deleted and replaced with the text |
-| Palette | `⌃Space` (everything) or `⌃⇧Space` (snippets only), select, `↩` |
+| Palette | `⌘Space` (everything) or `⌥Space` (snippets only), select, `↩` |
 
 - Matching is exact and case-sensitive.
 - If one keyword is a prefix of another, the shorter one waits instead of
