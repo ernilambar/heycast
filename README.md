@@ -1,8 +1,9 @@
 # heycast
 
-A macOS launcher palette. Press `⌃Space` anywhere, type a few letters, hit
-`↩`, and the app you meant opens. Press `⌃⇧Space` to search snippets only.
-Heycast lives in the menu bar — no Dock icon, no window to manage.
+A macOS launcher palette and window manager. Press `⌃Space` anywhere, type a
+few letters, hit `↩`, and the app you meant opens. Press `⌃⇧Space` to search
+snippets only. `⌃⌥` plus an arrow snaps the focused window. Heycast lives in
+the menu bar — no Dock icon, no main window.
 
 ## Install
 
@@ -18,9 +19,15 @@ from Launchpad or Finder.
   `keymaps.palette` in `config.json`.
 - `⌃⇧Space` opens the palette with snippets only. Change it with
   `keymaps.snippets`.
+- `⌃⌥←` and `⌃⌥→` fill the left or right half of the screen. `⌃⌥↑` and
+  `⌃⌥↓` use the top or bottom half. `⌃⌥↩` maximizes the focused window and
+  `⌃⌥C` centers it without changing its size.
+- Right-click the menu-bar item → "Window" for half, quarter, maximize and
+  center commands. Quarter commands ship without shortcuts; bind them in
+  `config.json`.
 - Click the menu-bar item to toggle the full palette.
 - Right-click the menu-bar item for "Open Palette", "Open Snippets",
-  "Edit Config…", "Permissions…" and "Quit Heycast".
+  "Window", "Edit Config…", "Permissions…" and "Quit Heycast".
 - `↑`/`↓` moves the selection, `↩` launches the selected app or pastes the
   selected snippet, clicking a row does the same, `esc` or focusing another app
   closes the palette.
@@ -62,21 +69,27 @@ All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
 ```
 
 - `keymaps` maps command names to global shortcuts. The built-in actions are
-  `palette` (the full apps-and-snippets palette) and `snippets` (snippets
-  only). Future actions such as window management use the same object; unknown
-  names are logged and ignored.
+  `palette` (the full apps-and-snippets palette), `snippets` (snippets only)
+  and the window commands `window.left`, `window.right`, `window.top`,
+  `window.bottom`, `window.topLeft`, `window.topRight`, `window.bottomLeft`,
+  `window.bottomRight`, `window.maximize` and `window.center`. Unknown names
+  are logged and ignored.
+- Window defaults are `ctrl+alt+left`, `ctrl+alt+right`, `ctrl+alt+up`,
+  `ctrl+alt+down`, `ctrl+alt+return` and `ctrl+alt+c`. Quarter commands are
+  unbound by default; add e.g. `"window.topLeft": "ctrl+alt+1"` to enable one.
 - Join modifiers and one key with `+`, for example `cmd+shift+k`, `alt+space`
   or `ctrl+f1`. Modifiers are `ctrl`/`control`, `alt`/`opt`/`option`,
   `cmd`/`command` and `shift`; at least one of control, option or command is
   required. Keys are letters, digits, `space`, `return`, `tab`, `escape`,
   arrows, `home`, `end`, `pageup`, `pagedown`, punctuation marks and
   `f1`…`f20` (`delete`, `backspace` and `forwarddelete` included).
-- Missing actions use their built-in default: `palette` is `ctrl+space` and
-  `snippets` is `ctrl+shift+space`. Set a value to `""` to disable that action.
+- Missing actions use their built-in defaults: `palette`, `snippets` and the
+  six bound window commands. Set a value to `""` to disable that action.
 - An invalid shortcut is logged and falls back to the action's default. A
-  duplicate shortcut is logged and the first action wins (`palette` before
-  `snippets`). Registration can also fail when another app or a system
-  shortcut owns the combination; that is logged too.
+  duplicate shortcut is logged and the first action wins (`palette`, then
+  `snippets`, then the window commands in the order listed above).
+  Registration can also fail when another app or a system shortcut owns the
+  combination; that is logged too.
 - The snippets folder defaults to `snippets/` beside `usage.json`; a configured
   path replaces it entirely and is created if missing.
 - `~` expands to your home directory; relative paths resolve against the config
@@ -104,15 +117,17 @@ Nilambar Sharma
 ## Permissions
 
 Heycast asks for one grant: **Accessibility**, used for inline snippet
-expansion and for pasting snippets into the app in front by typing ⌘V for you.
+expansion, for pasting snippets into the app in front by typing ⌘V for you, and
+for moving or resizing the focused window of another app.
 The first-run wizard explains it, shows the real system state, raises the
 consent prompt and links to the matching System Settings pane. Reopen it any
 time from "Permissions…".
 
-The global hotkeys (`⌃Space` and `⌃⇧Space` by default) need no grant. Heycast
-does not ask for Microphone, Speech Recognition, Input Monitoring, Screen
-Recording or Full Disk Access, and does not read your screen or protected
-files.
+The global hotkeys (`⌃Space`, `⌃⇧Space` and the window shortcuts by default)
+need no grant. Window commands and snippet pasting need Accessibility because
+they ask another app to move, resize, or receive input. Heycast does not ask for
+Microphone, Speech Recognition, Input Monitoring, Screen Recording or Full Disk
+Access, and does not read your screen or protected files.
 
 If no consent prompt appears, the standard cause is running an app from
 outside `/Applications`; move Heycast into `/Applications` and reopen it. Build

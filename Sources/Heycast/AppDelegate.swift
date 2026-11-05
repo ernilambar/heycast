@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let palette = PaletteController()
     private let permissions = PermissionWizardController()
+    private let windowManager = WindowManager()
     private var hotKeyControllers: [KeymapAction: HotKeyController] = [:]
     private var keymap = Keymap.default
     private var snippetExpander: SnippetExpander?
@@ -15,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let config = AppConfig.load()
         installStatusItem()
         palette.onAccessibilityMissing = { [weak self] in self?.permissions.show() }
+        windowManager.onAccessibilityMissing = { [weak self] in self?.permissions.show() }
         installKeymap(config.resolvedKeymap())
         let snippetsDirectory = logSnippetsDirectory(config)
         snippetExpander = SnippetExpander(directory: snippetsDirectory) { [weak self] in
@@ -46,7 +48,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         for action in KeymapAction.allCases {
             guard let hotKey = keymap[action] else {
-                NSLog("Heycast: keymap %@: disabled", action.rawValue)
+                if action.defaultShortcut != nil {
+                    NSLog("Heycast: keymap %@: disabled", action.rawValue)
+                }
                 continue
             }
 
@@ -71,7 +75,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 palette.show(scope: .snippets)
             }
+        case .window(let action):
+            performWindow(action)
         }
+    }
+
+    /// Window commands apply to the app that was in front before Heycast took
+    /// focus, so opening the palette first does not change the target.
+    private func performWindow(_ action: WindowAction) {
+        let target = targetApplicationForWindows()
+        if palette.isVisible {
+            palette.hide()
+        }
+
+        guard let target, !target.isTerminated,
+              target.processIdentifier != ProcessInfo.processInfo.processIdentifier
+        else {
+            NSLog("Heycast: window %@: no app in front", action.rawValue)
+            return
+        }
+
+        windowManager.perform(action, on: target)
+        target.activate(from: .current)
+    }
+
+    private func targetApplicationForWindows() -> NSRunningApplication? {
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        if frontmost == nil || frontmost?.bundleIdentifier == Bundle.main.bundleIdentifier {
+            return palette.previousApplication
+        }
+        return frontmost
     }
 
     /// The permissions are declared in Info.plist, but macOS only prompts the
@@ -118,6 +151,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item.target = self
         }
 
+        addWindowMenu(to: menu)
+
         menu.addItem(
             withTitle: "Edit Config…",
             action: #selector(editConfig),
@@ -138,6 +173,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.button?.performClick(nil)
         // Detach again so left clicks keep toggling the palette.
         statusItem?.menu = nil
+    }
+
+    /// Window commands get a submenu so the top level stays short. Actions
+    /// without a hotkey remain clickable.
+    private func addWindowMenu(to menu: NSMenu) {
+        let windowMenu = NSMenu(title: "Window")
+
+        for action in KeymapAction.allCases {
+            guard case .window(let windowAction) = action else { continue }
+            let hotKey = keymap[action]
+            let item = windowMenu.addItem(
+                withTitle: windowAction.title,
+                action: #selector(menuActionSelected(_:)),
+                keyEquivalent: hotKey?.keyEquivalent ?? ""
+            )
+            item.keyEquivalentModifierMask = hotKey?.menuModifiers ?? []
+            item.representedObject = action.rawValue
+            item.target = self
+        }
+
+        let item = menu.addItem(withTitle: "Window", action: nil, keyEquivalent: "")
+        item.submenu = windowMenu
     }
 
     @objc private func menuActionSelected(_ sender: NSMenuItem) {
