@@ -7,7 +7,19 @@ the menu bar — no Dock icon, no main window.
 
 ## Install
 
-- macOS 14 or later, Apple silicon.
+Requires macOS 14 or later, Apple silicon.
+
+### Homebrew (recommended)
+
+```sh
+brew install --cask ernilambar/tap/heycast
+```
+
+Upgrade with `brew upgrade --cask heycast`. `brew uninstall --zap --cask heycast`
+also removes the app's files.
+
+### Manual
+
 - Download `Heycast-macos-arm64.zip` from the
   [latest release](https://github.com/ernilambar/heycast/releases/latest), unzip
   it and move `Heycast.app` to `/Applications`.
@@ -20,7 +32,10 @@ the menu bar — no Dock icon, no main window.
 
   Alternatively, open the app once and allow it in System Settings → Privacy &
   Security → "Open Anyway".
-- To build and install from source instead, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+### From source
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 After installing, Heycast starts in the menu bar. There is nothing to launch
 from Launchpad or Finder.
