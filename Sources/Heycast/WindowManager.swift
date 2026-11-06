@@ -17,6 +17,17 @@ enum WindowCoordinates {
     static func fromAX(_ rect: CGRect, primaryHeight: CGFloat) -> CGRect {
         toAX(rect, primaryHeight: primaryHeight)
     }
+
+    /// Whether a window frame fills the whole screen frame, menu bar included.
+    /// Full-screen windows match; a maximized window stops at the visible
+    /// frame, so the two are distinguishable without a private attribute.
+    static func fillsScreen(_ window: CGRect, on screen: CGRect) -> Bool {
+        let tolerance: CGFloat = 1
+        return abs(window.minX - screen.minX) <= tolerance
+            && abs(window.minY - screen.minY) <= tolerance
+            && window.width >= screen.width - tolerance
+            && window.height >= screen.height - tolerance
+    }
 }
 
 /// Moves and resizes the focused window of another app through the
@@ -27,6 +38,15 @@ final class WindowManager {
     /// Called when a window command is blocked because Accessibility is not
     /// granted, so the owner can send the user to the permission wizard.
     var onAccessibilityMissing: (() -> Void)?
+
+    /// One frame per window, overwritten by every layout action: undo is a
+    /// single step. In-memory only; relaunching Heycast forgets it.
+    private struct WindowIdentity: Hashable {
+        let processIdentifier: pid_t
+        let title: String
+    }
+
+    private var undoFrames: [WindowIdentity: CGRect] = [:]
 
     func perform(_ action: WindowAction, on application: NSRunningApplication) {
         guard AXIsProcessTrusted() else {
@@ -72,6 +92,30 @@ final class WindowManager {
         )
         guard screens.indices.contains(index) else { return }
 
+        // Full-screen windows fill the screen frame, menu bar included; a
+        // maximized window stops at the visible frame. Leave full-screen
+        // windows alone so Heycast never forces a Space transition.
+        if WindowCoordinates.fillsScreen(current, on: screens[index].frame) {
+            NSLog(
+                "Heycast: window %@: %@ is full screen, skipped",
+                action.rawValue,
+                application.localizedName ?? "app"
+            )
+            return
+        }
+
+        let identity = WindowIdentity(
+            processIdentifier: application.processIdentifier,
+            title: windowTitle(of: window)
+        )
+
+        if action == .undo {
+            undo(window: window, identity: identity, application: application)
+            return
+        }
+
+        undoFrames[identity] = axFrame
+
         let target = action.frame(
             current: current,
             visible: screens[index].visibleFrame
@@ -81,6 +125,37 @@ final class WindowManager {
             on: window,
             action: action
         )
+    }
+
+    /// Restores the frame stored before the last layout action for this
+    /// window, then forgets it: undo is one step.
+    private func undo(
+        window: AXUIElement,
+        identity: WindowIdentity,
+        application: NSRunningApplication
+    ) {
+        guard let frame = undoFrames.removeValue(forKey: identity) else {
+            NSLog(
+                "Heycast: window undo: nothing to undo for %@",
+                application.localizedName ?? "app"
+            )
+            return
+        }
+        set(frame, on: window, action: .undo)
+    }
+
+    /// Window title is the only stable-enough identity the AX API exposes
+    /// without private attributes; a renamed window loses its undo step.
+    private func windowTitle(of window: AXUIElement) -> String {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            window,
+            kAXTitleAttribute as CFString,
+            &value
+        ) == .success,
+            let title = value as? String
+        else { return "" }
+        return title
     }
 
     private func focusedWindow(of application: AXUIElement) -> AXUIElement? {

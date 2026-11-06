@@ -28,11 +28,13 @@ final class PaletteModel: ObservableObject {
     @Published private(set) var scope: PaletteScope = .all
 
     private let usageStore: UsageStore
-    private let snippetsDirectory: URL
+    private var snippetsDirectory: URL
     private var usage = UsageRanking.empty
     private var applications: [LaunchableApp] = []
     private var snippets: [Snippet] = []
-    private var hasLoadedApplications = false
+    private var invalidSnippets: [InvalidSnippet] = []
+    private var scanTask: Task<Void, Never>?
+    private var scanAgain = false
 
     init(
         usageStore: UsageStore = .shared,
@@ -46,28 +48,59 @@ final class PaletteModel: ObservableObject {
         results.indices.contains(selectionIndex) ? results[selectionIndex] : nil
     }
 
+    /// Follows a changed `snippetsDirectory` without a relaunch.
+    func setSnippetsDirectory(_ url: URL) {
+        guard url.standardizedFileURL != snippetsDirectory.standardizedFileURL else { return }
+        snippetsDirectory = url
+        loadSnippets()
+        updateResults()
+    }
+
     func reset(scope: PaletteScope = .all) {
         self.scope = scope
         usage = usageStore.ranking()
         // Snippets are re-read on every open, so editing a file shows up
         // without restarting the app.
-        snippets = SnippetLibrary.load(from: snippetsDirectory)
+        loadSnippets()
         query = ""
         selectionIndex = 0
         updateResults()
-        loadApplicationsIfNeeded()
+        refreshApplications()
     }
 
-    func loadApplicationsIfNeeded() {
-        guard !hasLoadedApplications else { return }
-        hasLoadedApplications = true
-        isLoading = true
+    private func loadSnippets() {
+        let scan = SnippetLibrary.scan(from: snippetsDirectory)
+        snippets = scan.snippets
+        invalidSnippets = scan.invalid
+    }
 
-        Task {
+    /// Rescans the install roots on every open, so an app installed while
+    /// Heycast runs appears the next time the palette opens. Opens that arrive
+    /// during a scan collapse into one follow-up scan.
+    func refreshApplications() {
+        guard scanTask == nil else {
+            scanAgain = true
+            return
+        }
+
+        isLoading = applications.isEmpty
+        scanTask = Task { [weak self] in
             let apps = await ApplicationCatalog.load()
-            applications = apps
-            isLoading = false
-            updateResults()
+            guard let self else { return }
+            self.scanTask = nil
+            NSLog("Heycast: catalog: %d applications", apps.count)
+
+            if apps != self.applications {
+                let previousSelection = self.selected
+                self.applications = apps
+                self.updateResults(keepingSelection: previousSelection)
+            }
+            self.isLoading = false
+
+            if self.scanAgain {
+                self.scanAgain = false
+                self.refreshApplications()
+            }
         }
     }
 
@@ -82,14 +115,24 @@ final class PaletteModel: ObservableObject {
         selectionIndex = index
     }
 
-    private func updateResults() {
+    /// Re-ranks after a query or catalog change. A background rescan keeps the
+    /// highlighted row when it still exists, so typing during a scan is not
+    /// interrupted by the selection jumping back to the first result.
+    private func updateResults(keepingSelection selected: PaletteItem? = nil) {
         results = PaletteSearch.rank(
             applications: scope == .all ? applications : [],
             snippets: snippets,
+            invalidSnippets: scope == .snippets ? invalidSnippets : [],
+            commands: scope == .all ? PaletteCommand.allCases : [],
             matching: query,
             usage: usage
         )
-        selectionIndex = 0
+
+        if let selected, let index = results.firstIndex(of: selected) {
+            selectionIndex = index
+        } else {
+            selectionIndex = 0
+        }
     }
 }
 
@@ -215,11 +258,27 @@ struct PaletteView: View {
         PaletteControllerLayout.resultAreaHeight(for: model.results.count)
     }
 
+    /// Only the actions that work for the selected row are advertised; a
+    /// command row has no path to copy and no bundle identifier.
     private var actionHintText: String {
-        if model.selected?.snippet != nil {
-            return "↑↓ select   ↩ paste   esc close"
+        guard let item = model.selected else {
+            return "↑↓ select   esc close"
         }
-        return "↑↓ select   ↩ open   esc close"
+
+        switch item {
+        case .application(let app):
+            var hints = "↩ open   ⌘↩ reveal   ⌥⌘C path"
+            if app.bundleIdentifier != nil {
+                hints += "   ⌥⌘B ID"
+            }
+            return hints + "   esc"
+        case .snippet:
+            return "↩ paste   ⌘↩ reveal   ⌥⌘C path   esc"
+        case .invalidSnippet:
+            return "⌘↩ reveal   ⌥⌘C path   esc"
+        case .command:
+            return "↩ run   esc"
+        }
     }
 
     private var emptyMessage: String {
@@ -279,6 +338,13 @@ private struct PaletteRow: View {
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(isSelected ? .white.opacity(0.85) : .secondary)
                         .lineLimit(1)
+                } else if let issue = item.invalidSnippet {
+                    Text(issue.reason)
+                        .font(.system(size: 11))
+                        .foregroundStyle(isSelected ? .white.opacity(0.9) : .orange)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(issue.reason)
                 }
             }
             .padding(.horizontal, 10)
@@ -302,6 +368,14 @@ private struct PaletteRow: View {
         case .snippet(let snippet):
             Image(systemName: snippet.isScript ? "terminal" : "text.quote")
                 .font(.system(size: 15))
+                .foregroundStyle(isSelected ? .white : .secondary)
+        case .invalidSnippet:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(isSelected ? .white : .orange)
+        case .command(let command):
+            Image(systemName: command.symbol)
+                .font(.system(size: 14))
                 .foregroundStyle(isSelected ? .white : .secondary)
         }
     }

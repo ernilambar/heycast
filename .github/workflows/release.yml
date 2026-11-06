@@ -17,6 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       # Resources/Info.plist is the only place the version lives, so a tag that
       # disagrees with it would publish a mislabelled build.
       - name: Verify tag matches bundle version
@@ -28,15 +32,14 @@ jobs:
             exit 1
           fi
 
-      # CHANGELOG.md is the only release-notes source, so a tag without an entry
-      # would publish a release nobody can read.
-      - name: Verify CHANGELOG has an entry
+      # CHANGELOG.md is the only release-notes source, so a tag without a
+      # valid entry would publish a release nobody can read. flatlog also
+      # rejects an unreleased block, so the placeholder must be promoted with
+      # `flatlog release` before tagging.
+      - name: Validate CHANGELOG for the tag
         run: |
           tag_version="${GITHUB_REF_NAME#v}"
-          if ! grep -q "^## \[$tag_version\]" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no '## [$tag_version]' section"
-            exit 1
-          fi
+          npx --yes @nilambar/flatlog@2 validate "$tag_version"
 
       - name: Run unit tests
         run: make test

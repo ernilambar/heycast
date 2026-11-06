@@ -8,6 +8,10 @@ final class PermissionWizardController: NSObject, NSWindowDelegate {
     private let model = PermissionWizardModel()
     private var window: NSWindow?
 
+    /// Called only when the user finishes the wizard, so "Set Up Later" does
+    /// not mark setup as done.
+    var onFinish: (() -> Void)?
+
     var isVisible: Bool { window?.isVisible ?? false }
 
     func show() {
@@ -21,7 +25,9 @@ final class PermissionWizardController: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() -> NSWindow {
-        let root = PermissionWizardView(model: model) { [weak self] in self?.dismiss() }
+        let root = PermissionWizardView(model: model) { [weak self] completed in
+            self?.dismiss(completed: completed)
+        }
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
             styleMask: [.titled, .closable, .fullSizeContentView],
@@ -43,9 +49,12 @@ final class PermissionWizardController: NSObject, NSWindowDelegate {
         return window
     }
 
-    private func dismiss() {
+    private func dismiss(completed: Bool) {
         window?.orderOut(nil)
         model.stop()
+        if completed {
+            onFinish?()
+        }
     }
 
     func windowWillClose(_ notification: Notification) {

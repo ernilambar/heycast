@@ -18,7 +18,7 @@ make test              # unit tests (Swift Testing)
 make bundle            # release .app, -macos-arm64.zip and SHA256SUMS under dist/
 make bundle-release    # the same bundle, signing with the release identity only
 make stop              # quit a running instance
-make reset-permissions # clear TCC answers + the first-run flag
+make reset-permissions # clear TCC answers + the setup-complete flag
 make dev-cert          # one-time: stable signing identity so grants survive rebuilds
 make release-cert      # one-time: the "Heycast" identity that signs every release
 make clean
@@ -50,6 +50,11 @@ the action name used in `config.json`, its optional default shortcut and its
 menu title. `AppConfig.resolvedKeymap()` resolves configured bindings, rejects
 invalid and duplicate combinations, and yields the `Keymap` that
 `AppDelegate` registers through one `HotKeyController` per action.
+`AppDelegate.applyConfig()` repeats that resolution whenever `config.json`
+changes (the settings window writes it atomically, and a directory watcher
+catches hand edits), re-registering only when the keymap actually differs.
+`SystemShortcuts` lists the combinations macOS owns; the settings window shows
+those conflicts and any `RegisterEventHotKey` failure with a Change action.
 
 To add a command (window management, for example): add a `KeymapAction` case,
 give it a `defaultShortcut` or leave it `nil` to require an explicit bind, set
@@ -63,8 +68,8 @@ rather than nesting objects, so resolution remains a single
 ```json
 {
   "keymaps": {
-    "palette": "cmd+space",
-    "snippets": "alt+space",
+    "palette": "alt+space",
+    "snippets": "alt+shift+space",
     "window.left": "ctrl+alt+left",
     "window.right": "ctrl+alt+right",
     "window.top": "ctrl+alt+up",
@@ -84,6 +89,10 @@ hotkey.
 The app needs one grant today: **Accessibility**, used for inline snippet
 expansion and for typing ⌘V into the app in front after the palette copies a
 snippet body.
+
+The setup window does not open at launch. It opens the first time a snippet or
+window command needs Accessibility, and from "Permissions…" in the menu-bar
+item; the setup-complete flag is written only when the wizard is finished.
 
 - The global hotkeys need no grant: Carbon `RegisterEventHotKey` is delivered
   by the window server.
@@ -110,7 +119,7 @@ snippet body.
   macOS offers "Quit & Reopen" for screen recording; full disk access is
   granted by adding the app with `+` in the pane.
 - `make reset-permissions` runs `tccutil reset All <bundle id>` and forgets
-  the first-run flag.
+  the setup-complete flag.
 
 ## Icon
 
@@ -202,26 +211,35 @@ it; the cask clears the quarantine flag instead.
 Cadence is per phase, not per calendar: a release ships when a phase in the
 plan is done and has met its acceptance criteria. Versions follow semantic
 versioning, stay `0.x` through the planned phases, and each tag needs a
-`CHANGELOG.md` entry. There is no beta channel and no in-app updater.
+validated `CHANGELOG.md` entry. There is no beta channel and no in-app updater.
+
+`CHANGELOG.md` uses [flatlog](https://github.com/ernilambar/flatlog): flat
+bullets prefixed `Added:`, `Changed:` or `Fixed:`, newest release first, with
+an optional topmost `## X.X.X - YYYY-MM-DD` placeholder for work in progress.
+Run `npx @nilambar/flatlog validate` before committing changelog edits.
 
 `Resources/Info.plist` owns the version: `CFBundleShortVersionString` is the
 release version and `CFBundleVersion` its build number. Nothing else stores it,
 so a bump is a single-file change.
 
 1. Bump both keys in `Resources/Info.plist`.
-2. Move the `## [Unreleased]` items into a new `## [X.Y.Z] - YYYY-MM-DD`
-   section in [CHANGELOG.md](CHANGELOG.md).
+2. Promote the unreleased block with
+   `npx @nilambar/flatlog release X.Y.Z` (skip this when the version header
+   already exists), then check it with `npx @nilambar/flatlog validate X.Y.Z`.
 3. Run `make test && make bundle` and check `dist/` by hand. To test the exact
    CI path, run the signing job from the Actions tab first.
 4. Commit, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main vX.Y.Z`.
+5. After the release, run `npx @nilambar/flatlog next` to open the next
+   unreleased block.
 
 Pushing the tag runs `.github/workflows/release.yml`. It waits for approval on
 the `release` environment, then rejects a tag whose version differs from the
-plist, rejects a tag with no `CHANGELOG.md` section, runs the tests, imports the
-`Heycast` identity from the environment secrets, builds with signing enforced,
-checks the designated requirement, and publishes `Heycast-macos-arm64.zip` and
-`SHA256SUMS` on the GitHub release. A missing or mismatched certificate fails
-the job; the release path never falls back to ad-hoc signing.
+plist, rejects a tag whose changelog does not validate for that version, runs
+the tests, imports the `Heycast` identity from the environment secrets, builds
+with signing enforced, checks the designated requirement, and publishes
+`Heycast-macos-arm64.zip` and `SHA256SUMS` on the GitHub release. A missing or
+mismatched certificate fails the job; the release path never falls back to
+ad-hoc signing.
 
 The tag carries a `v` prefix; the plist keeps the bare version. The release
 title is the tag alone, e.g. `v0.1.0`, and the body is `CFBundleName` plus the
@@ -236,17 +254,23 @@ Sources/Heycast/
   SupportDirectory.swift Application Support namespace, file locations
   AppConfig.swift        config.json loading, keymap resolution, snippets path
   Keymap.swift           keymap actions, defaults, resolved shortcut map
-  HotKey.swift           hotkey parsing, display and menu key equivalent
+  HotKey.swift           hotkey parsing, display, serialization and menu key equivalent
+  SystemShortcuts.swift  shortcuts macOS already owns, checked by the settings window
   StatusBarIcon.swift    template H mark for the menu-bar item
-  PaletteController.swift NSPanel configuration, placement, resize, launching
+  PaletteController.swift NSPanel configuration, placement, resize, row actions, commands
   PaletteView.swift      SwiftUI palette content, scope, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking
-  Snippet.swift          snippet front matter, folder loading
+  Snippet.swift          snippet front matter, scan/validation, placeholders
   SnippetExpander.swift  typed-keyword matching and expansion event tap
   SyntheticKeyboard.swift synthesized backspaces and ⌘V for snippets
-  PaletteSearch.swift    merged app + snippet ranking for the palette
+  PaletteSearch.swift    merged app, snippet and command ranking; palette items
   UsageStore.swift       persisted launch counts and recency, usage scoring
   HotKeyController.swift global hotkeys via Carbon RegisterEventHotKey
+  LoginItem.swift        Launch at Login through SMAppService
+  SettingsModel.swift    settings rows, hotkey recorder, atomic config writes
+  SettingsView.swift     settings window content
+  SettingsController.swift  settings window lifecycle
+  Clipboard.swift        pasteboard snapshot restored after a snippet paste
   Permission.swift       TCC permissions: status checks, requests, panes
   PermissionWizardModel.swift  wizard steps, refresh on app activation
   PermissionWizardView.swift   wizard pages + summary

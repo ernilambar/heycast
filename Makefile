@@ -32,7 +32,7 @@ test:
 stop:
 	-@killall $(APP_NAME) 2>/dev/null
 
-# Clear every TCC answer and the first-run flag so the wizard starts over.
+# Clear every TCC answer and the setup-complete flag so the wizard starts over.
 # Useful after changing what the wizard asks for; ad-hoc rebuilds lose the
 # grants anyway.
 reset-permissions:

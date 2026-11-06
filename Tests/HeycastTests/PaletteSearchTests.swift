@@ -31,14 +31,57 @@ private func snippet(_ keyword: String, name: String? = nil) -> Snippet {
         #expect(ranked.map(\.title) == ["sig", "Signal"])
     }
 
-    @Test func snippetsMatchByTitle() {
-        let ranked = PaletteSearch.rank(
-            applications: [],
-            snippets: [snippet(";notes", name: "Meeting notes"), snippet(";sig", name: "Signature")],
-            matching: "meeting"
+    @Test func snippetMatchesOnlyItsExactCaseSensitiveKeyword() {
+        let snippets = [snippet(";sig", name: "Signature")]
+
+        #expect(
+            PaletteSearch.rank(applications: [], snippets: snippets, matching: ";sig")
+                .map(\.title) == ["Signature"]
+        )
+        #expect(
+            PaletteSearch.rank(applications: [], snippets: snippets, matching: ";si")
+                .isEmpty
+        )
+        #expect(
+            PaletteSearch.rank(applications: [], snippets: snippets, matching: ";SIG")
+                .isEmpty
+        )
+        #expect(
+            PaletteSearch.rank(applications: [], snippets: snippets, matching: "Signature")
+                .isEmpty
+        )
+    }
+
+    @Test func invalidSnippetsTrailResultsAndMatchByFilename() {
+        let issue = InvalidSnippet(
+            url: URL(fileURLWithPath: "/tmp/broken-note.md"),
+            reason: "The body is empty."
         )
 
-        #expect(ranked.map(\.title) == ["Meeting notes"])
+        let ranked = PaletteSearch.rank(
+            applications: [],
+            snippets: [snippet(";sig")],
+            invalidSnippets: [issue],
+            matching: ";sig"
+        )
+        #expect(ranked.map(\.title) == [";sig"])
+
+        let unfiltered = PaletteSearch.rank(
+            applications: [],
+            snippets: [snippet(";sig")],
+            invalidSnippets: [issue],
+            matching: ""
+        )
+        #expect(unfiltered.map(\.title) == [";sig", "broken-note"])
+
+        let byName = PaletteSearch.rank(
+            applications: [],
+            snippets: [],
+            invalidSnippets: [issue],
+            matching: "broken"
+        )
+        #expect(byName.map(\.title) == ["broken-note"])
+        #expect(byName.first?.invalidSnippet?.reason == "The body is empty.")
     }
 
     @Test func emptyQueryKeepsUsageOrderThenListsSnippets() {
@@ -56,6 +99,32 @@ private func snippet(_ keyword: String, name: String? = nil) -> Snippet {
         )
 
         #expect(ranked.map(\.title) == ["Zulu", "Alpha", ";notes", ";sig"])
+    }
+
+    @Test func commandsMatchByName() {
+        let ranked = PaletteSearch.rank(
+            applications: [],
+            snippets: [],
+            commands: PaletteCommand.allCases,
+            matching: "sleep"
+        )
+
+        #expect(ranked.map(\.title) == ["Sleep"])
+        #expect(ranked.first?.command == .sleep)
+    }
+
+    @Test func commandsFollowResultsWithoutQuery() {
+        let ranked = PaletteSearch.rank(
+            applications: [],
+            snippets: [snippet(";sig")],
+            commands: PaletteCommand.allCases,
+            matching: ""
+        )
+
+        #expect(
+            ranked.map(\.title)
+                == [";sig", "Open Config", "Open Permissions", "Sleep"]
+        )
     }
 
     @Test func unmatchedSnippetsAreFilteredOut() {

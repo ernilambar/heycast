@@ -5,7 +5,9 @@ import SwiftUI
 /// per page, then a summary the user can loop back from.
 struct PermissionWizardView: View {
     @ObservedObject var model: PermissionWizardModel
-    let onClose: () -> Void
+    /// `true` only when the user pressed Finish, so the caller can record
+    /// setup as done without treating "Set Up Later" as completion.
+    let onFinish: (Bool) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -14,14 +16,17 @@ struct PermissionWizardView: View {
             Divider()
 
             Group {
-                if let permission = model.currentPermission {
+                switch model.step {
+                case .moveToApplications:
+                    MoveToApplicationsStepView()
+                case .permission(let permission):
                     PermissionStepView(
                         permission: permission,
                         status: model.status(for: permission),
                         isRequesting: model.pending == permission,
                         action: { model.grant(permission) }
                     )
-                } else {
+                case .summary:
                     PermissionSummaryView(model: model)
                 }
             }
@@ -61,7 +66,7 @@ struct PermissionWizardView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button("Set Up Later", action: onClose)
+            Button("Set Up Later") { onFinish(false) }
                 .buttonStyle(.link)
                 .font(.system(size: 12))
 
@@ -73,7 +78,7 @@ struct PermissionWizardView: View {
 
             Button(model.isSummary ? "Finish" : "Continue") {
                 if model.isSummary {
-                    onClose()
+                    onFinish(true)
                 } else {
                     model.advance()
                 }
@@ -165,10 +170,71 @@ private struct PermissionStepView: View {
                         .buttonStyle(.borderedProminent)
                         .disabled(isRequesting)
 
-                        if permission.canPrompt {
+                        if permission.canPrompt, status == .notDetermined {
                             Button("Open System Settings") { permission.openSettings() }
                         }
                     }
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+// MARK: - Move to Applications
+
+/// macOS records Accessibility and Login Items against the bundle path, so a
+/// copy in a build folder or a Downloads unzip starts with grants that break
+/// the moment the user moves it. The step disappears once the app lives in
+/// `/Applications`, which is where the cask installs it.
+private struct MoveToApplicationsStepView: View {
+    private var appURL: URL { Bundle.main.bundleURL }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Image(systemName: "folder.badge.gearshape")
+                .font(.system(size: 26))
+                .foregroundStyle(.tint)
+                .frame(width: 34, height: 34, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Move Heycast to Applications")
+                    .font(.system(size: 24, weight: .semibold))
+
+                Text(
+                    "Heycast is running from \(appURL.deletingLastPathComponent().path). macOS ties Accessibility and Login Items to the app's location, so move it to /Applications before granting anything."
+                )
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text(
+                "Drag Heycast.app into Applications, then open it from there and reopen this setup from the menu-bar item."
+            )
+            .font(.system(size: 12))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                Color(nsColor: .textBackgroundColor).opacity(0.6),
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color(nsColor: .separatorColor))
+            )
+
+            HStack(spacing: 12) {
+                Button("Show Heycast in Finder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([appURL])
+                }
+                Button("Open Applications") {
+                    NSWorkspace.shared.open(
+                        URL(fileURLWithPath: "/Applications", isDirectory: true)
+                    )
                 }
             }
 
@@ -213,6 +279,28 @@ private struct PermissionSummaryView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color(nsColor: .separatorColor))
             )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(
+                    "Launch at Login",
+                    isOn: Binding(
+                        get: { model.launchAtLogin.isOn },
+                        set: { model.setLaunchAtLogin($0) }
+                    )
+                )
+                .toggleStyle(.switch)
+                .font(.system(size: 13))
+
+                Text(LoginItem.summary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                if model.launchAtLogin == .requiresApproval {
+                    Button("Open Login Items") { LoginItem.openSettings() }
+                        .buttonStyle(.link)
+                        .font(.system(size: 11))
+                }
+            }
 
             Spacer(minLength: 0)
         }

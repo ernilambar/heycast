@@ -67,6 +67,26 @@ private func inline(_ body: String) -> Snippet {
         #expect(try await SnippetRunner.resolve(snippet) == "Body\n")
     }
 
+    @Test func textSnippetsExpandPlaceholdersWhenResolved() async throws {
+        let snippet = Snippet(
+            keyword: ";now",
+            name: "Now",
+            body: "{date} {time} {uuid}",
+            url: snippetURL
+        )
+        let output = try await SnippetRunner.resolve(snippet)
+        let parts = output.split(separator: " ")
+
+        #expect(parts.count == 3)
+        #expect(parts[0].count == 10) // yyyy-MM-dd
+        #expect(parts[1].count == 5) // HH:mm
+        #expect(UUID(uuidString: String(parts[2])) != nil)
+    }
+
+    @Test func scriptsDoNotExpandPlaceholders() async throws {
+        #expect(try await SnippetRunner.resolve(inline("printf '{date}'")) == "{date}")
+    }
+
     @Test func inlineScriptWithoutShebangRunsInZsh() async throws {
         let output = try await SnippetRunner.resolve(inline("print -r -- ${ZSH_VERSION:+zsh}\n"))
         #expect(output == "zsh")

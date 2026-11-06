@@ -59,6 +59,11 @@ struct AboutView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 240)
+
+                Text("No telemetry. No analytics, no crash reporting.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
             // fullSizeContentView puts the traffic lights over the top-leading
             // corner, so the icon starts below them.

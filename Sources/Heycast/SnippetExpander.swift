@@ -45,7 +45,7 @@ struct SnippetIndex: Sendable {
 /// working on its own.
 @MainActor
 final class SnippetExpander {
-    private let directory: URL
+    private var directory: URL
     private let isEnabled: () -> Bool
 
     private var index = SnippetIndex(snippets: [])
@@ -110,7 +110,19 @@ final class SnippetExpander {
     }
 
     func reload() {
-        index = SnippetIndex(snippets: SnippetLibrary.load(from: directory))
+        index = SnippetIndex(snippets: SnippetLibrary.scan(from: directory).snippets)
+    }
+
+    /// Re-points the expander at the folder `config.json` now names, without a
+    /// relaunch: the old watcher is cancelled and a new one follows the new
+    /// folder.
+    func setDirectory(_ url: URL) {
+        guard url.standardizedFileURL != directory.standardizedFileURL else { return }
+        directorySource?.cancel()
+        directorySource = nil
+        directory = url
+        reload()
+        watchDirectory()
     }
 
     private func watchDirectory() {
@@ -205,8 +217,10 @@ final class SnippetExpander {
 
     private func paste(_ text: String, replacingKeywordOfLength keywordLength: Int) {
         let pasteboard = NSPasteboard.general
+        let previousClipboard = ClipboardSnapshot.capture(from: pasteboard)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let snippetChangeCount = pasteboard.changeCount
 
         SyntheticKeyboard.postBackspaces(keywordLength)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
@@ -214,6 +228,7 @@ final class SnippetExpander {
             self?.reload()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
                 self?.isExpanding = false
+                previousClipboard.restore(ifChangeCountIs: snippetChangeCount)
             }
         }
     }

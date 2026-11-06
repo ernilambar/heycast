@@ -19,7 +19,8 @@ Nilambar
   default entirely and is created if missing. `~` expands; a relative path
   resolves against the config file's directory; a symlinked folder works.
 - A path that cannot be created is logged and ignored in favour of the default.
-- Changing `snippetsDirectory` takes effect on the next launch.
+- Changing `snippetsDirectory` applies immediately: Settings writes the config,
+  and the expander and palette follow the new folder without a relaunch.
 - Flat folder: only top-level `.md` files load. Hidden files are ignored.
 - Edits apply on the next palette open or folder change. No restart needed.
 
@@ -34,7 +35,35 @@ Nilambar
 
 - One `key: value` per line. Matching quotes around a value are removed.
 - Files without front matter, without `keyword`, with an unknown `type`, or
-  with an empty body (except `script:` snippets) are skipped and logged.
+  with an empty body (except `script:` snippets) are rejected. They are listed
+  in the palette's snippets scope with the reason, so a typo is visible instead
+  of a file that silently never fires.
+
+## Placeholders
+
+Text snippets expand these at paste time — the moment you press `↩` or finish
+typing the keyword — not when the file is read:
+
+| Placeholder | Expands to |
+|---|---|
+| `{date}` | Local date, ISO 8601: `2026-11-06` |
+| `{time}` | Local 24-hour time: `14:05` |
+| `{clipboard}` | Current plain-text clipboard (empty if there is none) |
+| `{uuid}` | A new v4 UUID |
+
+```markdown
+---
+keyword: ;now
+---
+Logged at {date} {time}.
+```
+
+- `{{` and `}}` produce a literal `{` and `}`.
+- An unknown `{name}` stays exactly as written and is logged once per run.
+- Placeholders apply to text snippets only. Script output is pasted as
+  printed.
+- `{clipboard}` reads the clipboard at paste time, before Heycast writes the
+  snippet text, and the previous clipboard is restored afterwards.
 
 ## Body
 
@@ -47,13 +76,17 @@ Nilambar
 | Way | How |
 |---|---|
 | Inline | Type the keyword in any app. It is deleted and replaced with the text |
-| Palette | `⌘Space` (everything) or `⌥Space` (snippets only), select, `↩` |
+| Palette | `⌥Space` (everything) or `⌥⇧Space` (snippets only), select, `↩` |
 
-- Matching is exact and case-sensitive.
+- In the palette, a snippet matches only when the query is exactly its
+  keyword, case-sensitive. The title is display-only.
+- Invalid files appear after the working snippets in the snippets scope, with
+  the reason. `⌘↩` reveals any snippet or invalid file in Finder; clicking an
+  invalid row reveals it too.
 - If one keyword is a prefix of another, the shorter one waits instead of
   stealing the longer trigger.
 - ⌘/⌃/⌥ shortcuts, arrows, return, tab and escape reset the typed buffer.
-- Pasting types ⌘V into the target app, so it overwrites the clipboard.
+- Pasting types ⌘V into the target app, then restores your previous clipboard.
 - Needs Accessibility. Without it, the palette still copies the text to the
   clipboard; inline expansion is off.
 

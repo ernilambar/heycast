@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Carbon.HIToolbox
 import Combine
 import SwiftUI
 
@@ -28,6 +29,10 @@ final class PaletteController: NSObject, NSWindowDelegate {
     /// Called when a paste is blocked because Accessibility is not granted,
     /// so the owner can send the user to the permission wizard.
     var onAccessibilityMissing: (() -> Void)?
+
+    /// Runs a built-in palette command. The owner supplies the behaviour; the
+    /// palette only ranks and displays the rows.
+    var onCommand: ((PaletteCommand) -> Void)?
 
     override init() {
         let size = NSSize(
@@ -71,11 +76,18 @@ final class PaletteController: NSObject, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
-        // Scan at launch so the first palette open already has results.
-        model.loadApplicationsIfNeeded()
+        // Scan once at launch so the first palette open already has results;
+        // every open rescans in the background.
+        model.refreshApplications()
     }
 
     var isVisible: Bool { panel.isVisible }
+
+    /// Re-points the palette at the folder `config.json` now names; the next
+    /// open reads snippets from there without a relaunch.
+    func setSnippetsDirectory(_ url: URL) {
+        model.setSnippetsDirectory(url)
+    }
 
     func toggle(scope: PaletteScope = .all) {
         if isVisible, activeScope == scope {
@@ -125,7 +137,49 @@ final class PaletteController: NSObject, NSWindowDelegate {
             launch(app)
         case .snippet(let snippet):
             paste(snippet)
+        case .invalidSnippet(let issue):
+            // Nothing to paste; show the file that needs fixing.
+            hide()
+            NSWorkspace.shared.activateFileViewerSelecting([issue.url])
+        case .command(let command):
+            hide()
+            onCommand?(command)
         }
+    }
+
+    /// ⌘↩ reveals the selected row's file in Finder.
+    private func revealSelection() {
+        guard let url = model.selected?.fileURL else {
+            NSSound.beep()
+            return
+        }
+        hide()
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    /// ⌥⌘C copies the selected row's path.
+    private func copyPath() {
+        guard let path = model.selected?.fileURL?.path else {
+            NSSound.beep()
+            return
+        }
+        copyToPasteboard(path)
+    }
+
+    /// ⌥⌘B copies the selected application's bundle identifier.
+    private func copyBundleIdentifier() {
+        guard let bundleIdentifier = model.selected?.application?.bundleIdentifier else {
+            NSSound.beep()
+            return
+        }
+        copyToPasteboard(bundleIdentifier)
+    }
+
+    private func copyToPasteboard(_ string: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(string, forType: .string)
+        hide()
     }
 
     private func launch(_ app: LaunchableApp) {
@@ -166,8 +220,10 @@ final class PaletteController: NSObject, NSWindowDelegate {
 
     private func paste(_ text: String, keyword: String, into target: NSRunningApplication?) {
         let pasteboard = NSPasteboard.general
+        let previousClipboard = ClipboardSnapshot.capture(from: pasteboard)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let snippetChangeCount = pasteboard.changeCount
 
         guard AXIsProcessTrusted() else {
             NSLog(
@@ -185,6 +241,13 @@ final class PaletteController: NSObject, NSWindowDelegate {
 
         whenActive(target) {
             SyntheticKeyboard.postPaste()
+            // Restore only after the target has read the snippet. A user copy
+            // in the meantime bumps the change count and wins.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                MainActor.assumeIsolated {
+                    previousClipboard.restore(ifChangeCountIs: snippetChangeCount)
+                }
+            }
         }
         target.activate(from: .current)
     }
@@ -263,6 +326,24 @@ final class PaletteController: NSObject, NSWindowDelegate {
         if event.keyCode == 53, modifiers.isEmpty { // esc
             hide()
             return true
+        }
+
+        if (event.keyCode == 36 || event.keyCode == 76), modifiers == .command {
+            revealSelection()
+            return true
+        }
+
+        if modifiers == [.command, .option] {
+            switch Int(event.keyCode) {
+            case kVK_ANSI_C:
+                copyPath()
+                return true
+            case kVK_ANSI_B:
+                copyBundleIdentifier()
+                return true
+            default:
+                break
+            }
         }
 
         guard modifiers.isEmpty else { return false }
