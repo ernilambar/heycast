@@ -1,125 +1,49 @@
 # Changelog
 
-All notable changes to Heycast. The format is based on
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Heycast follows
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html): `0.x` until the
-planned phases ship, `1.0.0` only after the release is validated with real
-users.
+## X.X.X - YYYY-MM-DD
+- Added: Horizontal thirds in the Window submenu: left third, left two thirds, right third and right two thirds.
+- Added: One-step Undo Window Move in the Window submenu, one frame per window, in memory only.
+- Added: Full-screen windows are skipped and logged, so a window command never forces a Space transition.
+- Added: Palette row actions: ⌘↩ reveal, ⌥⌘C copy path, ⌥⌘B copy bundle identifier, with footer hints.
+- Added: Built-in palette commands matched by name: Sleep, Open Permissions and Open Config.
+- Added: Text-snippet placeholders expanded at paste time: {date}, {time}, {clipboard} and {uuid}.
+- Added: {{ and }} escape literal braces; an unknown {name} stays literal and logs once per run.
+- Added: Invalid snippet files appear in the snippets scope with the validation reason.
+- Added: ⌘↩ reveals a snippet, or an invalid snippet, in Finder.
+- Added: The About panel states that Heycast collects no telemetry.
+- Changed: Palette snippets match only the exact, case-sensitive keyword; titles are display-only.
+- Changed: Lock Screen is not offered; macOS 26 removed CGSession and the remaining paths need private APIs.
+- Changed: README has a Privacy section: no telemetry, no analytics, no network calls, local files only.
+- Changed: docs/snippets.md and docs/search.md cover placeholders, validation, commands and row actions.
+- Changed: CHANGELOG.md now uses flatlog; CI and the release workflow validate its structure.
 
-The release workflow refuses a tag without a matching `## [version]` section
-here, and the GitHub release body links to this file. This is the only
-release-notes source.
+## 0.2.0 - 2026-11-05
+- Added: Launch at Login through SMAppService, with a menu toggle, settings toggle and setup summary.
+- Added: Settings window for shortcuts, snippets folder and Launch at Login; writes config.json atomically.
+- Added: Live reload: a new shortcut or snippets folder applies immediately; hand edits are picked up too.
+- Added: Shortcut conflict warnings for macOS-owned bindings and RegisterEventHotKey failures.
+- Added: Move to /Applications step in setup when the app runs from elsewhere.
+- Added: Release signing with the stable Heycast identity; a missing certificate fails the build.
+- Added: Designated-requirement check so updates cannot silently reset Accessibility.
+- Changed: Palette default is ⌥Space, snippets ⌥⇧Space; ⌘Space and ⌃Space stay with macOS.
+- Changed: Accessibility is requested at first snippet or window use, not at launch.
+- Changed: App catalog rescans on every palette open in the background.
+- Changed: README leads with the demo, two-command brew install and update command; the zip path is gone.
+- Changed: Homebrew 7 tap trust is documented as required.
+- Changed: About panel and README lead with the product positioning.
+- Fixed: Snippet pastes restore the previous clipboard after the paste; a newer copy wins.
+- Fixed: A missing hotkey registration is no longer log-only.
 
-## [Unreleased]
-
-Phase 2: snippets earn their keyboard time. Placeholders expand when you paste,
-broken snippet files explain themselves, and the palette finds a snippet by its
-exact keyword.
-
-### Added
-
-- Horizontal thirds in the Window submenu: left third, left two thirds, right
-  third and right two thirds. Unbound by default; each applies one fixed
-  layout, with no cycling.
-- One-step window undo (`Undo Window Move`) in the Window submenu, per window,
-  in memory only. Unbound by default.
-- Full-screen windows are skipped and logged instead of being resized, so a
-  window command never forces a Space transition.
-- Palette row actions: `⌘↩` reveals the selected app or snippet in Finder,
-  `⌥⌘C` copies its path, and `⌥⌘B` copies an app's bundle identifier. The
-  footer lists only the actions available for the selected row.
-- Built-in commands found by name in the all scope: `Sleep`,
-  `Open Permissions` and `Open Config`. They add no global shortcut and no
-  permission. `Lock Screen` was dropped: macOS 26 removed `CGSession`, and the
-  remaining mechanisms need a private API or an Automation grant.
-- Text-snippet placeholders, expanded at paste time: `{date}` (local ISO 8601),
-  `{time}` (local 24-hour), `{clipboard}` (plain text) and `{uuid}` (v4).
-- `{{` and `}}` escape literal braces. An unknown `{name}` stays as written
-  and is logged once per run.
-- Invalid snippet files are listed in the palette's snippets scope with the
-  validation reason, instead of disappearing silently.
-- `⌘↩` reveals the selected snippet — or invalid snippet — in Finder. Clicking
-  an invalid row reveals it too.
-
-### Changed
-
-- Palette snippet matching is exact and case-sensitive by keyword; titles are
-  display-only. This matches what the inline trigger already did and removes
-  fuzzy title matches.
-- `docs/snippets.md` and `docs/search.md` document placeholders, validation and
-  the reveal action.
-
-## [0.2.0] - 2026-11-05
-
-Phase 1: install and survive. One brew-only install path, a signed release, a
-login item, live settings, and a snippet paste that gives the clipboard back.
-
-### Added
-
-- Launch at Login through `SMAppService`, with a toggle in the menu-bar item,
-  the settings window and the setup summary. The approval state in System
-  Settings is shown instead of being treated as an error.
-- Settings window: record or remove any global shortcut, choose the snippets
-  folder, and toggle Launch at Login. It writes `config.json` atomically and
-  leaves unknown keys untouched.
-- Live reload: a new shortcut or snippets folder takes effect immediately, and
-  a hand edit to `config.json` is picked up without a relaunch.
-- Shortcut conflict warnings: the settings window compares every binding with
-  the shortcuts macOS owns (Spotlight, input sources, Mission Control,
-  screenshots, …) and shows `RegisterEventHotKey` failures, each with a Change
-  shortcut action.
-- A "Move to /Applications" setup step when the app runs from anywhere else,
-  because macOS records Accessibility against the bundle path.
-- Release signing with the stable `Heycast` identity: the release workflow now
-  fails instead of shipping an ad-hoc build, and every build is checked against
-  the committed designated requirement so an update cannot silently reset
-  Accessibility.
-- This changelog, the release cadence it enforces, and the signed release gate.
-
-### Changed
-
-- The palette default is `⌥Space` and the snippets default is `⌥⇧Space`.
-  `⌘Space` stays with Spotlight and `⌃Space` with input sources.
-- Accessibility is requested at first snippet or window use, not at launch.
-  Launching apps needs no grant. The setup-complete flag is written only when
-  the wizard is finished, and "Permissions…" reopens it.
-- The application catalog is rescanned on every palette open, in the
-  background, so an app installed while Heycast runs appears on the next open.
-- The README leads with a 10-second palette demo, what Heycast does, the
-  two-command brew install, and the update command; the zip download path is
-  gone. Homebrew 7's tap trust is documented as required.
-- The About panel and README lead with the product's one-sentence positioning.
-
-### Fixed
-
-- Snippet pastes restore the previous clipboard after the paste instead of
-  leaving the snippet text on it. A newer copy in the meantime wins.
-- A missing hotkey registration is no longer log-only.
-
-## [0.1.0] - 2026-11-05
-
-First public build: an arm64, menu-bar-only palette.
-
-### Added
-
-- Menu-bar launcher palette for applications in `/Applications`,
-  `/System/Applications` and `~/Applications`, ranked by launch count and
-  recency.
-- Snippet expansion and snippet pasting from Markdown files with `keyword`
-  front matter, including script snippets whose output is pasted.
-- Window management: left, right, top and bottom halves, maximize and center.
-- Configurable global shortcuts declared in `config.json`, with an "Edit
-  Config…" menu item that seeds a template.
-- First-run permission wizard for Accessibility, reopenable from the menu.
-- About panel with the app version and project links.
-- Unit tests for the pure logic (search ranking, snippet parsing, keymap
-  resolution, usage scoring) and CI on `macos-15`.
-
-### Known limitations
-
-- Apple silicon only, macOS 14 or later. No Intel build.
-- Not notarized. The Homebrew cask clears the download quarantine; a manual
-  unzip does not, and Gatekeeper blocks it.
-- No login item, no in-app updater. Update with `brew upgrade --cask heycast`.
-- Configuration changes take effect on the next launch.
-- No telemetry of any kind, and no crash reporting.
+## 0.1.0 - 2026-11-05
+- Added: Menu-bar palette for apps in /Applications, /System/Applications and ~/Applications, ranked by usage.
+- Added: Snippet expansion and pasting from Markdown front matter, including script snippets.
+- Added: Window management for halves, maximize and center.
+- Added: Configurable global shortcuts in config.json, with an Edit Config menu item.
+- Added: Accessibility setup wizard, reopenable from the menu.
+- Added: About panel with the app version and project links.
+- Added: Unit tests for the pure logic and CI on macos-15.
+- Changed: Apple silicon only, macOS 14 or later; no Intel build.
+- Changed: Not notarized; the Homebrew cask clears quarantine and a manual unzip is blocked.
+- Changed: No login item or in-app updater; update with brew upgrade --cask heycast.
+- Changed: Configuration changes apply on the next launch.
+- Changed: No telemetry of any kind and no crash reporting.

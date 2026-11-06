@@ -211,26 +211,35 @@ it; the cask clears the quarantine flag instead.
 Cadence is per phase, not per calendar: a release ships when a phase in the
 plan is done and has met its acceptance criteria. Versions follow semantic
 versioning, stay `0.x` through the planned phases, and each tag needs a
-`CHANGELOG.md` entry. There is no beta channel and no in-app updater.
+validated `CHANGELOG.md` entry. There is no beta channel and no in-app updater.
+
+`CHANGELOG.md` uses [flatlog](https://github.com/ernilambar/flatlog): flat
+bullets prefixed `Added:`, `Changed:` or `Fixed:`, newest release first, with
+an optional topmost `## X.X.X - YYYY-MM-DD` placeholder for work in progress.
+Run `npx @nilambar/flatlog validate` before committing changelog edits.
 
 `Resources/Info.plist` owns the version: `CFBundleShortVersionString` is the
 release version and `CFBundleVersion` its build number. Nothing else stores it,
 so a bump is a single-file change.
 
 1. Bump both keys in `Resources/Info.plist`.
-2. Move the `## [Unreleased]` items into a new `## [X.Y.Z] - YYYY-MM-DD`
-   section in [CHANGELOG.md](CHANGELOG.md).
+2. Promote the unreleased block with
+   `npx @nilambar/flatlog release X.Y.Z`, then check it with
+   `npx @nilambar/flatlog validate X.Y.Z`.
 3. Run `make test && make bundle` and check `dist/` by hand. To test the exact
    CI path, run the signing job from the Actions tab first.
 4. Commit, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main vX.Y.Z`.
+5. After the release, run `npx @nilambar/flatlog next` to open the next
+   unreleased block.
 
 Pushing the tag runs `.github/workflows/release.yml`. It waits for approval on
 the `release` environment, then rejects a tag whose version differs from the
-plist, rejects a tag with no `CHANGELOG.md` section, runs the tests, imports the
-`Heycast` identity from the environment secrets, builds with signing enforced,
-checks the designated requirement, and publishes `Heycast-macos-arm64.zip` and
-`SHA256SUMS` on the GitHub release. A missing or mismatched certificate fails
-the job; the release path never falls back to ad-hoc signing.
+plist, rejects a tag whose changelog does not validate for that version, runs
+the tests, imports the `Heycast` identity from the environment secrets, builds
+with signing enforced, checks the designated requirement, and publishes
+`Heycast-macos-arm64.zip` and `SHA256SUMS` on the GitHub release. A missing or
+mismatched certificate fails the job; the release path never falls back to
+ad-hoc signing.
 
 The tag carries a `v` prefix; the plist keeps the bare version. The release
 title is the tag alone, e.g. `v0.1.0`, and the body is `CFBundleName` plus the

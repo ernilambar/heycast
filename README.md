@@ -20,6 +20,14 @@ account, no telemetry.
 - **Stay out of the way.** Menu bar only: no Dock icon, no main window, no
   queue of notifications.
 
+## Privacy
+
+**No telemetry.** Heycast itself makes no network calls: there is no
+analytics, no crash reporting, no install ID and no account. Settings,
+snippets and usage history are plain files in
+`~/Library/Application Support/net.nilambar.heycast/`. Script snippets run
+only the code you wrote, including any network access that code contains.
+
 ## Install (30 seconds)
 
 Requires macOS 14 or later on Apple silicon, and Homebrew 7 or later.

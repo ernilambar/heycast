@@ -18,8 +18,13 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Show Swift version
         run: swift --version
+      - name: Validate changelog
+        run: npx --yes @nilambar/flatlog@2 validate
       - name: Run unit tests
         run: make test
 
