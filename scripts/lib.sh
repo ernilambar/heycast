@@ -68,6 +68,7 @@ identity_present() {
 resolve_sign_identity() {
     if [ -n "${HEYCAST_SIGN_IDENTITY:-}" ]; then
         sign_identity="$HEYCAST_SIGN_IDENTITY"
+        resolve_bundle_variant
         return
     fi
     if [ "${HEYCAST_RELEASE:-0}" = "1" ]; then
@@ -77,6 +78,7 @@ resolve_sign_identity() {
             exit 1
         fi
         sign_identity="$release_identity"
+        resolve_bundle_variant
         return
     fi
     # Local builds prefer the dev identity so the release key is only used by
@@ -87,6 +89,24 @@ resolve_sign_identity() {
         sign_identity="-"
         printf 'warning: no signing identity found; signing ad-hoc\n' >&2
         printf '  run make dev-cert to keep TCC grants across rebuilds\n' >&2
+    fi
+    resolve_bundle_variant
+}
+
+# resolve_bundle_variant: pick the identifier and name the bundle ships with.
+#
+# TCC stores one Accessibility entry per bundle identifier, keyed to the
+# signature of whichever copy was granted. A dev build and a release sharing
+# net.nilambar.heycast overwrite each other's install, and the surviving grant
+# shows ON in System Settings while AXIsProcessTrusted() returns false. Every
+# build not signed by the release identity therefore gets its own identifier,
+# name and Application Support folder, so the two never share a TCC entry.
+resolve_bundle_variant() {
+    bundle_id="$(plist_value CFBundleIdentifier)"
+    bundle_name="$app_name"
+    if [ "$sign_identity" != "$release_identity" ]; then
+        bundle_id="$bundle_id.dev"
+        bundle_name="$app_name Dev"
     fi
 }
 
@@ -152,13 +172,16 @@ check_designated_requirement() {
 }
 
 # assemble_bundle <config>: lay out dist/Heycast.app around the executable
-# Swift already built for <config>, replacing any previous copy.
+# Swift already built for <config>, replacing any previous copy. Call
+# resolve_sign_identity first: it sets the identifier and name stamped here.
 assemble_bundle() {
     local config="$1"
     rm -rf "$app"
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
     cp "$root/.build/$config/$executable" "$app/Contents/MacOS/$executable"
     cp "$plist" "$app/Contents/Info.plist"
+    plutil -replace CFBundleIdentifier -string "$bundle_id" "$app/Contents/Info.plist"
+    plutil -replace CFBundleName -string "$bundle_name" "$app/Contents/Info.plist"
     cp "$root/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
     codesign --force --sign "$sign_identity" "$app"
 }

@@ -3,13 +3,10 @@ import Foundation
 /// Every file Heycast owns lives under one Application Support folder:
 /// `usage.json`, `config.json` and the default `snippets/` directory.
 enum SupportDirectory {
-    /// Fallback for `swift run`, which has no bundle identifier. Without it,
-    /// development would read a different folder than the installed app.
-    static let fallbackIdentifier = "net.nilambar.heycast"
-
-    static var identifier: String {
-        Bundle.main.bundleIdentifier ?? fallbackIdentifier
-    }
+    /// Fixed rather than read from the bundle: `Heycast Dev` builds carry
+    /// `net.nilambar.heycast.dev` for their own TCC entry, and `swift run` has
+    /// no identifier at all, yet every build must share one set of files.
+    static let identifier = "net.nilambar.heycast"
 
     static var url: URL {
         let fileManager = FileManager.default

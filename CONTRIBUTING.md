@@ -115,11 +115,103 @@ item; the setup-complete flag is written only when the wizard is finished.
   After creating it (or switching identity), run `make reset-permissions` and
   grant again: an existing grant still points at the old signature, so it
   shows ON in System Settings but does not apply.
+- Any build not signed with the release identity ships as `Heycast Dev`,
+  identifier `net.nilambar.heycast.dev`, installed to
+  `/Applications/Heycast Dev.app`. TCC keeps one entry per identifier, so a
+  dev build and a release sharing one identifier would overwrite each other's
+  grant. Files are shared: `SupportDirectory` hardcodes
+  `net.nilambar.heycast/`, so both variants read the same config, snippets
+  and usage. Back that folder up before testing a config-format change.
+  `make run` quits every running copy first, because
+  only one process can hold the global shortcuts.
 - Screen Recording and Full Disk Access only take effect after relaunching.
   macOS offers "Quit & Reopen" for screen recording; full disk access is
   granted by adding the app with `+` in the pane.
 - `make reset-permissions` runs `tccutil reset All <bundle id>` and forgets
   the setup-complete flag.
+
+## Testing a pull request
+
+A PR builds as `Heycast Dev` (see above), so testing it never touches the
+installed release or its Accessibility grant.
+
+**Read the PR's `scripts/`, `Makefile` and `Package.swift` changes before
+running anything.** `make` runs the PR's shell scripts with your login keychain
+unlocked, and codesign can use the `Heycast` release key there without a
+prompt. A malicious script could sign any binary as the release, and that
+binary would inherit Accessibility on every user's Mac. Test untrusted PRs on
+a machine or user account without the release identity.
+
+```sh
+gh pr checkout 42      # fetch the PR branch and switch to it
+make test              # pure-logic suite
+make run               # quits every running copy, installs and launches Heycast Dev
+```
+
+Then exercise what the PR changes in the running app. Accessibility granted to
+`Heycast Dev` once carries over to every PR, as long as `make dev-cert`'s
+identity stays the same. If a snippet or window action does nothing, the grant
+is stale: `make reset-permissions`, then grant `Heycast Dev` again.
+
+Heycast Dev shares config, snippets and usage with the release, so a PR that
+changes the `config.json` format writes to your real file. Copy the folder
+before testing one:
+
+```sh
+cp -R "$HOME/Library/Application Support/net.nilambar.heycast" ~/heycast-backup
+```
+
+When done, follow [Back to the Homebrew release](#back-to-the-homebrew-release).
+
+To check the full release gate the PR will face in CI, run the
+[Quality Gate](AGENTS.md#quality-gate) steps too: `make test`,
+`npx @nilambar/flatlog validate` and `make bundle`. A user-facing PR without a
+`CHANGELOG.md` bullet is incomplete.
+
+## Back to the Homebrew release
+
+When you stop working on the repo, remove the dev app and run the cask build
+alone. The release keeps its Accessibility grant, and config, snippets and
+usage stay put because both builds share them.
+
+1. In Heycast Dev, turn off **Launch at Login** if you turned it on. A deleted
+   app can leave a stale login item behind.
+2. Quit every copy and delete the dev app:
+
+   ```sh
+   make stop
+   rm -rf "/Applications/Heycast Dev.app"
+   ```
+
+3. Forget the dev app's grant and preferences:
+
+   ```sh
+   tccutil reset All net.nilambar.heycast.dev
+   defaults delete net.nilambar.heycast.dev
+   ```
+
+   Do not use `make reset-permissions` here: it also resets the release's
+   grant.
+4. Put the cask build back, in case `./scripts/dev.sh --release` with the
+   release identity replaced `/Applications/Heycast.app`, then launch it:
+
+   ```sh
+   brew reinstall --cask heycast
+   open /Applications/Heycast.app
+   ```
+
+   The cask build has the same signature as the one you granted, so it keeps
+   Accessibility. If it does not, run
+   `tccutil reset Accessibility net.nilambar.heycast` and grant it once more.
+5. If a dev build changed `config.json`, restore the backup from
+   [Testing a pull request](#testing-a-pull-request):
+
+   ```sh
+   cp ~/heycast-backup/config.json "$HOME/Library/Application Support/net.nilambar.heycast/"
+   ```
+
+Coming back to the repo later needs no setup: `make run` reinstalls Heycast
+Dev, which asks for Accessibility once.
 
 ## Icon
 

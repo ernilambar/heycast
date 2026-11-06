@@ -34,10 +34,12 @@ stop:
 
 # Clear every TCC answer and the setup-complete flag so the wizard starts over.
 # Useful after changing what the wizard asks for; ad-hoc rebuilds lose the
-# grants anyway.
+# grants anyway. Covers the release identifier and the .dev one local builds use.
 reset-permissions:
-	-@tccutil reset All $(BUNDLE_ID)
-	-@defaults delete $(BUNDLE_ID) setup.wizard.shown
+	-@for id in $(BUNDLE_ID) $(BUNDLE_ID).dev; do \
+		tccutil reset All $$id; \
+		defaults delete $$id setup.wizard.shown 2>/dev/null; \
+	done
 
 # One-time: a stable self-signed identity so TCC grants survive rebuilds.
 dev-cert:

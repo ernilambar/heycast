@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.1 - 2026-11-06
+- Changed: Local builds install as Heycast Dev, so they no longer reset the release Accessibility grant.
+
 ## 0.2.0 - 2026-11-06
 - Added: Launch at Login through SMAppService, with a menu toggle, settings toggle and setup summary.
 - Added: Settings window for shortcuts, snippets folder and Launch at Login; changes apply immediately.
