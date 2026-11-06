@@ -101,6 +101,32 @@ private func snippet(_ keyword: String, name: String? = nil) -> Snippet {
         #expect(ranked.map(\.title) == ["Zulu", "Alpha", ";notes", ";sig"])
     }
 
+    @Test func commandsMatchByName() {
+        let ranked = PaletteSearch.rank(
+            applications: [],
+            snippets: [],
+            commands: PaletteCommand.allCases,
+            matching: "sleep"
+        )
+
+        #expect(ranked.map(\.title) == ["Sleep"])
+        #expect(ranked.first?.command == .sleep)
+    }
+
+    @Test func commandsFollowResultsWithoutQuery() {
+        let ranked = PaletteSearch.rank(
+            applications: [],
+            snippets: [snippet(";sig")],
+            commands: PaletteCommand.allCases,
+            matching: ""
+        )
+
+        #expect(
+            ranked.map(\.title)
+                == [";sig", "Open Config", "Open Permissions", "Sleep"]
+        )
+    }
+
     @Test func unmatchedSnippetsAreFilteredOut() {
         let ranked = PaletteSearch.rank(
             applications: [],

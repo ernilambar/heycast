@@ -19,8 +19,38 @@
 - Invalid snippet files appear after the results in the snippets scope, with
   the validation reason, and `⌘↩` reveals them in Finder.
 - Empty query: frequently and recently launched apps first, then the rest
-  alphabetically, then snippets by keyword, then invalid files by filename.
+  alphabetically, then snippets by keyword, then invalid files by filename,
+  then built-in commands by name.
 - The panel grows from one to seven visible rows, then scrolls.
+
+## Commands
+
+Built-in commands are ordinary rows in the all scope. Type their name; there is
+no prefix, `>` grammar or separate mode.
+
+| Command | Does |
+|---|---|
+| `Sleep` | Sleeps the Mac (runs `/usr/bin/pmset sleepnow`) |
+| `Open Permissions` | Opens the Accessibility setup window |
+| `Open Config` | Opens `config.json` in the default editor |
+
+- Commands are matched by name with the same tiers as applications.
+- They do not appear in the snippets scope and have no global shortcut.
+- **Lock Screen is not offered.** macOS 26 removed `CGSession`, and the
+  remaining mechanisms need either a private API or an Automation grant, which
+  would break the no-new-permission rule.
+- Window actions stay on their hotkeys and in the Window menu; they are not
+  duplicated as palette rows.
+
+## Row actions
+
+| Keys | Action |
+|---|---|
+| `⌘↩` | Reveal the selected app or snippet file in Finder |
+| `⌥⌘C` | Copy its path |
+| `⌥⌘B` | Copy an app's bundle identifier, when it has one |
+
+The footer lists only the actions that work for the selected row.
 
 ## Usage history
 

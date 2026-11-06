@@ -1,18 +1,51 @@
 import Foundation
 
-/// One row of the palette: an application to launch, a snippet to paste, or a
-/// snippet file that failed validation. The panel shows all three through the
-/// same list, ranking and keyboard handling.
+/// Built-in actions offered as palette rows. They are found by name in the
+/// all scope, never get a global shortcut, and are not modes: selecting one
+/// runs it and closes the palette.
+///
+/// Lock Screen is deliberately absent. macOS 26 removed `CGSession`, and every
+/// remaining way to lock the screen needs a private API or an Automation grant,
+/// so shipping it would break the "no new permission" rule.
+enum PaletteCommand: String, CaseIterable, Identifiable, Sendable {
+    case sleep
+    case openPermissions
+    case openConfig
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .sleep: "Sleep"
+        case .openPermissions: "Open Permissions"
+        case .openConfig: "Open Config"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .sleep: "moon.zzz.fill"
+        case .openPermissions: "hand.raised.fill"
+        case .openConfig: "doc.text.fill"
+        }
+    }
+}
+
+/// One row of the palette: an application to launch, a snippet to paste, a
+/// snippet file that failed validation, or a built-in command. The panel shows
+/// all of them through the same list, ranking and keyboard handling.
 enum PaletteItem: Identifiable, Hashable, Sendable {
     case application(LaunchableApp)
     case snippet(Snippet)
     case invalidSnippet(InvalidSnippet)
+    case command(PaletteCommand)
 
     var id: String {
         switch self {
         case .application(let app): "app:\(app.url.path)"
         case .snippet(let snippet): "snippet:\(snippet.url.path)"
         case .invalidSnippet(let issue): "invalid:\(issue.url.path)"
+        case .command(let command): "command:\(command.rawValue)"
         }
     }
 
@@ -21,6 +54,7 @@ enum PaletteItem: Identifiable, Hashable, Sendable {
         case .application(let app): app.name
         case .snippet(let snippet): snippet.name
         case .invalidSnippet(let issue): issue.name
+        case .command(let command): command.title
         }
     }
 
@@ -39,13 +73,18 @@ enum PaletteItem: Identifiable, Hashable, Sendable {
         return nil
     }
 
-    /// File to reveal in Finder for the snippet rows. Applications have a URL
-    /// too, but revealing an app is a later phase.
-    var snippetFileURL: URL? {
+    var command: PaletteCommand? {
+        if case .command(let command) = self { return command }
+        return nil
+    }
+
+    /// File a row points at, used by reveal and copy-path.
+    var fileURL: URL? {
         switch self {
+        case .application(let app): app.url
         case .snippet(let snippet): snippet.url
         case .invalidSnippet(let issue): issue.url
-        case .application: nil
+        case .command: nil
         }
     }
 }
@@ -65,6 +104,7 @@ enum PaletteSearch {
         applications: [LaunchableApp],
         snippets: [Snippet],
         invalidSnippets: [InvalidSnippet] = [],
+        commands: [PaletteCommand] = [],
         matching rawQuery: String,
         usage: UsageRanking = .empty
     ) -> [PaletteItem] {
@@ -78,6 +118,11 @@ enum PaletteSearch {
                 .map(PaletteItem.application)
                 + snippets.sorted(by: isOrderedBefore).map(PaletteItem.snippet)
                 + invalid
+                + commands
+                    .sorted {
+                        $0.title.localizedStandardCompare($1.title) == .orderedAscending
+                    }
+                    .map(PaletteItem.command)
         }
 
         var ranked: [Ranked] = []
@@ -99,6 +144,19 @@ enum PaletteSearch {
                 Ranked(
                     item: .snippet(snippet),
                     match: ApplicationSearch.NameMatch(tier: 0, detail: 0),
+                    usageScore: 0
+                )
+            )
+        }
+        for command in commands {
+            guard let match = ApplicationSearch.nameMatch(
+                candidate: command.title,
+                query: foldedQuery
+            ) else { continue }
+            ranked.append(
+                Ranked(
+                    item: .command(command),
+                    match: match,
                     usageScore: 0
                 )
             )

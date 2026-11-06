@@ -47,9 +47,13 @@ Upgrade with `brew upgrade --cask heycast`. Remove the app and its files with
 - Click the menu-bar item to toggle the palette.
 - Right-click the menu-bar item for Settings, "Launch at Login",
   "Permissions…", the Window submenu and "Edit Config…".
-- `↑`/`↓` moves the selection, `↩` launches the selected app or pastes the
-  selected snippet, clicking a row does the same, `esc` or focusing another app
-  closes the palette.
+- `↑`/`↓` moves the selection, `↩` launches the selected app, pastes the
+  selected snippet, or runs a command; clicking a row does the same. `esc` or
+  focusing another app closes the palette.
+- On a selected row, `⌘↩` reveals the file in Finder, `⌥⌘C` copies its path and
+  `⌥⌘B` copies an app's bundle identifier. The footer shows what applies.
+- Type `Sleep`, `Open Permissions` or `Open Config` to run a built-in command
+  from the palette. Commands are matched by name; no prefix is needed.
 - Typing a snippet keyword in any app expands it in place; this needs
   Accessibility.
 

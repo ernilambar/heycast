@@ -33,6 +33,7 @@ import Testing
         #expect(model.scope == .snippets)
         #expect(!model.results.isEmpty)
         #expect(model.results.allSatisfy { $0.snippet != nil })
+        #expect(model.results.allSatisfy { $0.command == nil })
 
         model.query = ";sig"
         #expect(model.results.map(\.title) == ["Signature"])

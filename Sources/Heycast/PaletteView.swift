@@ -123,6 +123,7 @@ final class PaletteModel: ObservableObject {
             applications: scope == .all ? applications : [],
             snippets: snippets,
             invalidSnippets: scope == .snippets ? invalidSnippets : [],
+            commands: scope == .all ? PaletteCommand.allCases : [],
             matching: query,
             usage: usage
         )
@@ -257,14 +258,27 @@ struct PaletteView: View {
         PaletteControllerLayout.resultAreaHeight(for: model.results.count)
     }
 
+    /// Only the actions that work for the selected row are advertised; a
+    /// command row has no path to copy and no bundle identifier.
     private var actionHintText: String {
-        if model.selected?.invalidSnippet != nil {
-            return "⌘↩ reveal   esc close"
+        guard let item = model.selected else {
+            return "↑↓ select   esc close"
         }
-        if model.selected?.snippet != nil {
-            return "↑↓ select   ↩ paste   ⌘↩ reveal   esc close"
+
+        switch item {
+        case .application(let app):
+            var hints = "↩ open   ⌘↩ reveal   ⌥⌘C path"
+            if app.bundleIdentifier != nil {
+                hints += "   ⌥⌘B ID"
+            }
+            return hints + "   esc"
+        case .snippet:
+            return "↩ paste   ⌘↩ reveal   ⌥⌘C path   esc"
+        case .invalidSnippet:
+            return "⌘↩ reveal   ⌥⌘C path   esc"
+        case .command:
+            return "↩ run   esc"
         }
-        return "↑↓ select   ↩ open   esc close"
     }
 
     private var emptyMessage: String {
@@ -359,6 +373,10 @@ private struct PaletteRow: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 14))
                 .foregroundStyle(isSelected ? .white : .orange)
+        case .command(let command):
+            Image(systemName: command.symbol)
+                .font(.system(size: 14))
+                .foregroundStyle(isSelected ? .white : .secondary)
         }
     }
 }

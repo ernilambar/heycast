@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Carbon.HIToolbox
 import Combine
 import SwiftUI
 
@@ -28,6 +29,10 @@ final class PaletteController: NSObject, NSWindowDelegate {
     /// Called when a paste is blocked because Accessibility is not granted,
     /// so the owner can send the user to the permission wizard.
     var onAccessibilityMissing: (() -> Void)?
+
+    /// Runs a built-in palette command. The owner supplies the behaviour; the
+    /// palette only ranks and displays the rows.
+    var onCommand: ((PaletteCommand) -> Void)?
 
     override init() {
         let size = NSSize(
@@ -136,18 +141,45 @@ final class PaletteController: NSObject, NSWindowDelegate {
             // Nothing to paste; show the file that needs fixing.
             hide()
             NSWorkspace.shared.activateFileViewerSelecting([issue.url])
+        case .command(let command):
+            hide()
+            onCommand?(command)
         }
     }
 
-    /// ⌘↩ on a snippet row reveals its Markdown file. Applications keep their
-    /// current behaviour until the row actions phase.
+    /// ⌘↩ reveals the selected row's file in Finder.
     private func revealSelection() {
-        guard let url = model.selected?.snippetFileURL else {
+        guard let url = model.selected?.fileURL else {
             NSSound.beep()
             return
         }
         hide()
         NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    /// ⌥⌘C copies the selected row's path.
+    private func copyPath() {
+        guard let path = model.selected?.fileURL?.path else {
+            NSSound.beep()
+            return
+        }
+        copyToPasteboard(path)
+    }
+
+    /// ⌥⌘B copies the selected application's bundle identifier.
+    private func copyBundleIdentifier() {
+        guard let bundleIdentifier = model.selected?.application?.bundleIdentifier else {
+            NSSound.beep()
+            return
+        }
+        copyToPasteboard(bundleIdentifier)
+    }
+
+    private func copyToPasteboard(_ string: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(string, forType: .string)
+        hide()
     }
 
     private func launch(_ app: LaunchableApp) {
@@ -299,6 +331,19 @@ final class PaletteController: NSObject, NSWindowDelegate {
         if (event.keyCode == 36 || event.keyCode == 76), modifiers == .command {
             revealSelection()
             return true
+        }
+
+        if modifiers == [.command, .option] {
+            switch Int(event.keyCode) {
+            case kVK_ANSI_C:
+                copyPath()
+                return true
+            case kVK_ANSI_B:
+                copyBundleIdentifier()
+                return true
+            default:
+                break
+            }
         }
 
         guard modifiers.isEmpty else { return false }

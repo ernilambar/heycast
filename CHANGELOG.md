@@ -18,6 +18,13 @@ exact keyword.
 
 ### Added
 
+- Palette row actions: `⌘↩` reveals the selected app or snippet in Finder,
+  `⌥⌘C` copies its path, and `⌥⌘B` copies an app's bundle identifier. The
+  footer lists only the actions available for the selected row.
+- Built-in commands found by name in the all scope: `Sleep`,
+  `Open Permissions` and `Open Config`. They add no global shortcut and no
+  permission. `Lock Screen` was dropped: macOS 26 removed `CGSession`, and the
+  remaining mechanisms need a private API or an Automation grant.
 - Text-snippet placeholders, expanded at paste time: `{date}` (local ISO 8601),
   `{time}` (local 24-hour), `{clipboard}` (plain text) and `{uuid}` (v4).
 - `{{` and `}}` escape literal braces. An unknown `{name}` stays as written

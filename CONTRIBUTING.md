@@ -248,13 +248,13 @@ Sources/Heycast/
   HotKey.swift           hotkey parsing, display, serialization and menu key equivalent
   SystemShortcuts.swift  shortcuts macOS already owns, checked by the settings window
   StatusBarIcon.swift    template H mark for the menu-bar item
-  PaletteController.swift NSPanel configuration, placement, resize, launching
+  PaletteController.swift NSPanel configuration, placement, resize, row actions, commands
   PaletteView.swift      SwiftUI palette content, scope, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking
   Snippet.swift          snippet front matter, scan/validation, placeholders
   SnippetExpander.swift  typed-keyword matching and expansion event tap
   SyntheticKeyboard.swift synthesized backspaces and ⌘V for snippets
-  PaletteSearch.swift    merged app + snippet ranking for the palette
+  PaletteSearch.swift    merged app, snippet and command ranking; palette items
   UsageStore.swift       persisted launch counts and recency, usage scoring
   HotKeyController.swift global hotkeys via Carbon RegisterEventHotKey
   LoginItem.swift        Launch at Login through SMAppService

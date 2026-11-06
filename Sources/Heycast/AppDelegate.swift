@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installStatusItem()
 
         palette.onAccessibilityMissing = { [weak self] in self?.permissions.show() }
+        palette.onCommand = { [weak self] command in self?.performCommand(command) }
         windowManager.onAccessibilityMissing = { [weak self] in self?.permissions.show() }
 
         // Resolve config, register hot keys and start the snippet expander.
@@ -241,6 +242,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return palette.previousApplication
         }
         return frontmost
+    }
+
+    // MARK: - Commands
+
+    private func performCommand(_ command: PaletteCommand) {
+        switch command {
+        case .sleep:
+            // pmset asks the system to sleep; it needs no Accessibility or
+            // Automation grant and opens no prompt.
+            run("/usr/bin/pmset", arguments: ["sleepnow"])
+        case .openPermissions:
+            permissions.show()
+        case .openConfig:
+            editConfig()
+        }
+    }
+
+    /// Runs a short helper off the main thread and logs a non-zero exit, so a
+    /// failed command is visible in Console instead of doing nothing quietly.
+    private func run(_ tool: String, arguments: [String]) {
+        Task.detached(priority: .userInitiated) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: tool)
+            process.arguments = arguments
+
+            do {
+                try process.run()
+                process.waitUntilExit()
+                if process.terminationStatus != 0 {
+                    NSLog(
+                        "Heycast: %@ %@ exited with %d",
+                        tool,
+                        arguments.joined(separator: " "),
+                        process.terminationStatus
+                    )
+                }
+            } catch {
+                NSLog(
+                    "Heycast: cannot run %@: %@",
+                    tool,
+                    error.localizedDescription
+                )
+            }
+        }
     }
 
     // MARK: - Menu
