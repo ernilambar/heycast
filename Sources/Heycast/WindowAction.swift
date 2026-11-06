@@ -12,8 +12,15 @@ enum WindowAction: String, CaseIterable, Sendable {
     case topRight
     case bottomLeft
     case bottomRight
+    case leftThird
+    case leftTwoThirds
+    case rightThird
+    case rightTwoThirds
     case maximize
     case center
+    /// Restores the frame before the last layout change. Menu-only: it has no
+    /// default shortcut, and the history is in memory.
+    case undo
 
     private static let controlOption = UInt32(controlKey | optionKey)
 
@@ -48,7 +55,10 @@ enum WindowAction: String, CaseIterable, Sendable {
         case .bottom: Self.bottomShortcut
         case .maximize: Self.maximizeShortcut
         case .center: Self.centerShortcut
-        case .topLeft, .topRight, .bottomLeft, .bottomRight: nil
+        case .topLeft, .topRight, .bottomLeft, .bottomRight,
+             .leftThird, .leftTwoThirds, .rightThird, .rightTwoThirds,
+             .undo:
+            nil
         }
     }
 
@@ -62,8 +72,13 @@ enum WindowAction: String, CaseIterable, Sendable {
         case .topRight: "Top Right Quarter"
         case .bottomLeft: "Bottom Left Quarter"
         case .bottomRight: "Bottom Right Quarter"
+        case .leftThird: "Left Third"
+        case .leftTwoThirds: "Left Two Thirds"
+        case .rightThird: "Right Third"
+        case .rightTwoThirds: "Right Two Thirds"
         case .maximize: "Maximize"
         case .center: "Center"
+        case .undo: "Undo Window Move"
         }
     }
 
@@ -133,6 +148,34 @@ enum WindowAction: String, CaseIterable, Sendable {
                 width: halfWidth,
                 height: halfHeight
             )
+        case .leftThird:
+            return CGRect(
+                x: visible.minX,
+                y: visible.minY,
+                width: visible.width / 3,
+                height: visible.height
+            )
+        case .leftTwoThirds:
+            return CGRect(
+                x: visible.minX,
+                y: visible.minY,
+                width: visible.width * 2 / 3,
+                height: visible.height
+            )
+        case .rightThird:
+            return CGRect(
+                x: visible.minX + visible.width * 2 / 3,
+                y: visible.minY,
+                width: visible.width / 3,
+                height: visible.height
+            )
+        case .rightTwoThirds:
+            return CGRect(
+                x: visible.minX + visible.width / 3,
+                y: visible.minY,
+                width: visible.width * 2 / 3,
+                height: visible.height
+            )
         case .maximize:
             return visible
         case .center:
@@ -144,6 +187,9 @@ enum WindowAction: String, CaseIterable, Sendable {
                 width: width,
                 height: height
             )
+        case .undo:
+            // Undo restores a stored frame; the layout itself is a no-op.
+            return current
         }
     }
 

@@ -29,9 +29,18 @@ name; each value is a shortcut string.
 | `window.topRight` | — | Top-right quarter |
 | `window.bottomLeft` | — | Bottom-left quarter |
 | `window.bottomRight` | — | Bottom-right quarter |
+| `window.leftThird` | — | Fill the left third |
+| `window.leftTwoThirds` | — | Fill the left two thirds |
+| `window.rightThird` | — | Fill the right third |
+| `window.rightTwoThirds` | — | Fill the right two thirds |
+| `window.undo` | — | Undo the last window move, one step per window |
 
 Window commands act on the focused window and need Accessibility. All of them
-are also in the menu-bar item's "Window" submenu.
+are also in the menu-bar item's "Window" submenu; thirds and undo ship unbound
+and are used from that submenu. Each action applies one fixed layout — there is
+no cycling. A full-screen window is left untouched and the attempt is logged,
+so Heycast never forces a Space transition. Undo history is in memory only and
+holds one step per window.
 
 The defaults deliberately avoid the combinations macOS owns: no `⌘Space`
 (Spotlight), no `⌃Space` (input sources), no `⌃↑`/`⌃↓` (Mission Control).

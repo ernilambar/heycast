@@ -45,6 +45,68 @@ import Testing
         )
     }
 
+    @Test func thirdsTileTheVisibleFrame() {
+        #expect(
+            WindowAction.leftThird.frame(current: current, visible: visible)
+                == CGRect(x: 0, y: 0, width: visible.width / 3, height: 800)
+        )
+        #expect(
+            WindowAction.leftTwoThirds.frame(current: current, visible: visible)
+                == CGRect(x: 0, y: 0, width: visible.width * 2 / 3, height: 800)
+        )
+        #expect(
+            WindowAction.rightThird.frame(current: current, visible: visible)
+                == CGRect(
+                    x: visible.width * 2 / 3,
+                    y: 0,
+                    width: visible.width / 3,
+                    height: 800
+                )
+        )
+        #expect(
+            WindowAction.rightTwoThirds.frame(current: current, visible: visible)
+                == CGRect(
+                    x: visible.width / 3,
+                    y: 0,
+                    width: visible.width * 2 / 3,
+                    height: 800
+                )
+        )
+    }
+
+    @Test func thirdsAndUndoHaveNoDefaultShortcut() {
+        for action: WindowAction in [
+            .leftThird, .leftTwoThirds, .rightThird, .rightTwoThirds, .undo,
+        ] {
+            #expect(action.defaultShortcut == nil)
+        }
+    }
+
+    @Test func undoDoesNotComputeALayout() {
+        #expect(
+            WindowAction.undo.frame(current: current, visible: visible) == current
+        )
+    }
+
+    @Test func fullscreenIsDetectedByScreenCoverage() {
+        let screen = CGRect(x: 0, y: 0, width: 1000, height: 800)
+
+        #expect(WindowCoordinates.fillsScreen(screen, on: screen))
+        // Maximized: stops at the visible frame above the Dock/menu bar.
+        #expect(
+            !WindowCoordinates.fillsScreen(
+                CGRect(x: 0, y: 0, width: 1000, height: 770),
+                on: screen
+            )
+        )
+        #expect(
+            !WindowCoordinates.fillsScreen(
+                CGRect(x: 100, y: 100, width: 800, height: 600),
+                on: screen
+            )
+        )
+    }
+
     @Test func maximizeUsesTheVisibleFrame() {
         #expect(
             WindowAction.maximize.frame(current: current, visible: visible)

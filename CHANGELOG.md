@@ -18,6 +18,13 @@ exact keyword.
 
 ### Added
 
+- Horizontal thirds in the Window submenu: left third, left two thirds, right
+  third and right two thirds. Unbound by default; each applies one fixed
+  layout, with no cycling.
+- One-step window undo (`Undo Window Move`) in the Window submenu, per window,
+  in memory only. Unbound by default.
+- Full-screen windows are skipped and logged instead of being resized, so a
+  window command never forces a Space transition.
 - Palette row actions: `⌘↩` reveals the selected app or snippet in Finder,
   `⌥⌘C` copies its path, and `⌥⌘B` copies an app's bundle identifier. The
   footer lists only the actions available for the selected row.

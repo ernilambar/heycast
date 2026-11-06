@@ -377,6 +377,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         for action in KeymapAction.allCases {
             guard case .window(let windowAction) = action else { continue }
+
+            // Undo is a distinct action, not another layout: separate it so it
+            // cannot be mistaken for a sixth placement.
+            if windowAction == .undo {
+                windowMenu.addItem(.separator())
+            }
+
             let hotKey = keymap?[action]
             let item = windowMenu.addItem(
                 withTitle: windowAction.title,
