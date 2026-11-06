@@ -4,7 +4,7 @@ A menu-bar launcher for everyday Mac work: one shortcut opens apps, pastes
 snippets and snaps windows. Small, native, local-first — plain files, no
 account, no telemetry.
 
-![The palette filtering applications as you type](docs/demo.gif)
+![The palette filtering applications as you type](docs/palette.png)
 
 ## What it does
 
