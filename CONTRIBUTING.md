@@ -33,8 +33,8 @@ Its icon is the H monogram drawn as a template image (`StatusBarIcon.swift`), so
 the system tints it black or white for the current menu-bar appearance instead
 of showing the colored app icon.
 SwiftUI content is hosted in a borderless floating `NSPanel` that toggles from
-the status-bar item, the palette hotkey (`⌘Space`), the snippets-only hotkey
-(`⌥Space`) or the menu-bar menu.
+the status-bar item, the palette hotkey (`⌥Space`), the snippets-only hotkey
+(`⌥⇧Space`) or the menu-bar menu.
 
 ## Panel
 
