@@ -1,6 +1,6 @@
 # Changelog
 
-## X.X.X - YYYY-MM-DD
+## 0.2.2 - 2026-11-06
 - Fixed: Palette snippet search matches by keyword or name instead of only the exact keyword.
 
 ## 0.2.1 - 2026-11-06
