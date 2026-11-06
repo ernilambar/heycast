@@ -224,8 +224,8 @@ so a bump is a single-file change.
 
 1. Bump both keys in `Resources/Info.plist`.
 2. Promote the unreleased block with
-   `npx @nilambar/flatlog release X.Y.Z`, then check it with
-   `npx @nilambar/flatlog validate X.Y.Z`.
+   `npx @nilambar/flatlog release X.Y.Z` (skip this when the version header
+   already exists), then check it with `npx @nilambar/flatlog validate X.Y.Z`.
 3. Run `make test && make bundle` and check `dist/` by hand. To test the exact
    CI path, run the signing job from the Actions tab first.
 4. Commit, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main vX.Y.Z`.
