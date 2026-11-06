@@ -28,8 +28,8 @@ Nilambar
 
 | Field | Required | Meaning |
 |---|---|---|
-| `keyword` | Yes | Trigger and palette match, e.g. `;sig` |
-| `name` | No | Title in the palette. Defaults to `keyword` |
+| `keyword` | Yes | Trigger, e.g. `;sig`. Also searched in the palette |
+| `name` | No | Title in the palette, also searched. Defaults to `keyword` |
 | `type` | No | `text` (default) or `script` |
 | `script` | No | Path to an executable whose output is pasted. Overrides `type` and the body |
 
@@ -78,8 +78,8 @@ Logged at {date} {time}.
 | Inline | Type the keyword in any app. It is deleted and replaced with the text |
 | Palette | `⌥Space` (everything) or `⌥⇧Space` (snippets only), select, `↩` |
 
-- In the palette, a snippet matches only when the query is exactly its
-  keyword, case-sensitive. The title is display-only.
+- In the palette, a snippet matches by keyword or name, like applications.
+  The exact keyword ranks first.
 - Invalid files appear after the working snippets in the snippets scope, with
   the reason. `⌘↩` reveals any snippet or invalid file in Finder; clicking an
   invalid row reveals it too.

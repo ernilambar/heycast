@@ -14,8 +14,8 @@
 
 - Applications use name tiers, best first: exact, prefix, acronym,
   word-prefix, substring, subsequence. Usage breaks ties inside a tier.
-- A snippet matches only when the query is exactly its keyword,
-  case-sensitive. Its title is display-only; there is no fuzzy matching.
+- Snippets use the same tiers against their keyword and name; the better
+  match counts. The exact keyword (case-sensitive) always ranks first.
 - Invalid snippet files appear after the results in the snippets scope, with
   the validation reason, and `⌘↩` reveals them in Finder.
 - Empty query: frequently and recently launched apps first, then the rest

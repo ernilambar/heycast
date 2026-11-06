@@ -1,5 +1,8 @@
 # Changelog
 
+## X.X.X - YYYY-MM-DD
+- Fixed: Palette snippet search matches by keyword or name instead of only the exact keyword.
+
 ## 0.2.1 - 2026-11-06
 - Changed: Local builds install as Heycast Dev, so they no longer reset the release Accessibility grant.
 

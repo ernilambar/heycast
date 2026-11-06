@@ -31,25 +31,29 @@ private func snippet(_ keyword: String, name: String? = nil) -> Snippet {
         #expect(ranked.map(\.title) == ["sig", "Signal"])
     }
 
-    @Test func snippetMatchesOnlyItsExactCaseSensitiveKeyword() {
-        let snippets = [snippet(";sig", name: "Signature")]
+    @Test func snippetMatchesByKeywordOrName() {
+        let snippets = [snippet(";delay", name: "Auto-update Delay")]
 
-        #expect(
-            PaletteSearch.rank(applications: [], snippets: snippets, matching: ";sig")
-                .map(\.title) == ["Signature"]
+        for query in [";delay", ";del", "delay", "DELAY", "auto", "Auto-update", "aud"] {
+            #expect(
+                PaletteSearch.rank(applications: [], snippets: snippets, matching: query)
+                    .map(\.title) == ["Auto-update Delay"],
+                "query: \(query)"
+            )
+        }
+    }
+
+    @Test func exactKeywordOutranksNameMatches() {
+        let ranked = PaletteSearch.rank(
+            applications: [],
+            snippets: [
+                snippet(";rdelay", name: "Delay Removed"),
+                snippet(";delay", name: "Auto-update Delay"),
+            ],
+            matching: ";delay"
         )
-        #expect(
-            PaletteSearch.rank(applications: [], snippets: snippets, matching: ";si")
-                .isEmpty
-        )
-        #expect(
-            PaletteSearch.rank(applications: [], snippets: snippets, matching: ";SIG")
-                .isEmpty
-        )
-        #expect(
-            PaletteSearch.rank(applications: [], snippets: snippets, matching: "Signature")
-                .isEmpty
-        )
+
+        #expect(ranked.map(\.title) == ["Auto-update Delay", "Delay Removed"])
     }
 
     @Test func invalidSnippetsTrailResultsAndMatchByFilename() {

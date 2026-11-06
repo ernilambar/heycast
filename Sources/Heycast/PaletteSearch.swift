@@ -91,10 +91,10 @@ enum PaletteItem: Identifiable, Hashable, Sendable {
 
 /// Ranks applications and snippets together.
 ///
-/// Applications use the tiered name matching from `ApplicationSearch`. A
-/// snippet matches only when the query is exactly its keyword, case-sensitive:
-/// a launcher that drops a half-typed keyword on the clipboard is worse than
-/// one that waits for the whole trigger.
+/// Applications, snippets and commands share the tiered name matching from
+/// `ApplicationSearch`. Snippets match by keyword or name, and an exact
+/// keyword ranks first. Nothing is pasted until `↩`, so a partial match is
+/// safe here; inline expansion still waits for the whole keyword.
 ///
 /// With no query, applications keep their usage-driven order, valid snippets
 /// follow alphabetically by keyword, and invalid files come last so their
@@ -139,11 +139,13 @@ enum PaletteSearch {
                 )
             )
         }
-        for snippet in snippets where snippet.keyword == query {
+        for snippet in snippets {
+            guard let match = snippetMatch(snippet, query: query, foldedQuery: foldedQuery)
+            else { continue }
             ranked.append(
                 Ranked(
                     item: .snippet(snippet),
-                    match: ApplicationSearch.NameMatch(tier: 0, detail: 0),
+                    match: match,
                     usageScore: 0
                 )
             )
@@ -182,14 +184,29 @@ enum PaletteSearch {
         return rankedItems + invalid
     }
 
+    /// The exact keyword ranks first; otherwise the better of the keyword and
+    /// name matches counts, so `delay`, `;del` and `Auto-update` all find
+    /// `;delay` ("Auto-update Delay").
+    private static func snippetMatch(
+        _ snippet: Snippet,
+        query: String,
+        foldedQuery: String
+    ) -> ApplicationSearch.NameMatch? {
+        if snippet.keyword == query {
+            return ApplicationSearch.NameMatch(tier: 0, detail: 0)
+        }
+        return [snippet.keyword, snippet.name]
+            .compactMap { ApplicationSearch.nameMatch(candidate: $0, query: foldedQuery) }
+            .min { ($0.tier, $0.detail) < ($1.tier, $1.detail) }
+    }
+
     private struct Ranked {
         let item: PaletteItem
         let match: ApplicationSearch.NameMatch
         let usageScore: Double
     }
 
-    /// Invalid files have no keyword, so they are found by filename. This is
-    /// deliberately the only non-exact match in the snippets scope; it helps
+    /// Invalid files have no keyword, so they are found by filename. It helps
     /// locate the file to fix rather than pretending it can be pasted.
     private static func matchingInvalid(
         _ invalid: [InvalidSnippet],
