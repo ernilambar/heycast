@@ -73,7 +73,10 @@ jobs:
             echo "  actual:   $actual"
             exit 1
           fi
-          if ! codesign -dv "$app" 2>&1 | grep -qx 'Authority=Heycast'; then
+          # Authority lines only appear at -dvv. Capture first: grep -q exiting
+          # early would SIGPIPE codesign and trip pipefail.
+          details="$(codesign -dvv "$app" 2>&1)"
+          if ! grep -qx 'Authority=Heycast' <<<"$details"; then
             echo "::error::$app is not signed by the Heycast identity"
             exit 1
           fi
