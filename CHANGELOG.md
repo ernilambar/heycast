@@ -10,6 +10,31 @@ The release workflow refuses a tag without a matching `## [version]` section
 here, and the GitHub release body links to this file. This is the only
 release-notes source.
 
+## [Unreleased]
+
+Phase 2: snippets earn their keyboard time. Placeholders expand when you paste,
+broken snippet files explain themselves, and the palette finds a snippet by its
+exact keyword.
+
+### Added
+
+- Text-snippet placeholders, expanded at paste time: `{date}` (local ISO 8601),
+  `{time}` (local 24-hour), `{clipboard}` (plain text) and `{uuid}` (v4).
+- `{{` and `}}` escape literal braces. An unknown `{name}` stays as written
+  and is logged once per run.
+- Invalid snippet files are listed in the palette's snippets scope with the
+  validation reason, instead of disappearing silently.
+- `⌘↩` reveals the selected snippet — or invalid snippet — in Finder. Clicking
+  an invalid row reveals it too.
+
+### Changed
+
+- Palette snippet matching is exact and case-sensitive by keyword; titles are
+  display-only. This matches what the inline trigger already did and removes
+  fuzzy title matches.
+- `docs/snippets.md` and `docs/search.md` document placeholders, validation and
+  the reveal action.
+
 ## [0.2.0] - 2026-11-05
 
 Phase 1: install and survive. One brew-only install path, a signed release, a

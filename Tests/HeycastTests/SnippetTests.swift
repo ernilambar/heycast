@@ -159,15 +159,73 @@ private let fileURL = URL(fileURLWithPath: "/tmp/example.md")
             encoding: .utf8
         )
 
-        let snippets = SnippetLibrary.load(from: directory)
+        let scan = SnippetLibrary.scan(from: directory)
 
-        #expect(snippets.map(\.keyword) == [";notes", ";sig"])
-        #expect(snippets.map(\.url.lastPathComponent) == ["second.md", "first.md"])
+        #expect(scan.snippets.map(\.keyword) == [";notes", ";sig"])
+        #expect(scan.snippets.map(\.url.lastPathComponent) == ["second.md", "first.md"])
+        #expect(scan.invalid.isEmpty)
     }
 
     @Test func missingDirectoryLoadsNothing() {
+        let scan = SnippetLibrary.scan(
+            from: URL(fileURLWithPath: "/nonexistent-heycast/snippets")
+        )
+        #expect(scan.snippets.isEmpty)
+        #expect(scan.invalid.isEmpty)
+    }
+
+    @Test func scanReportsWhyAFileIsInvalid() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        try "Just text\n".write(
+            to: directory.appendingPathComponent("plain.md"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try "---\nkeyword: ;macro\ntype: macro\n---\nBody\n".write(
+            to: directory.appendingPathComponent("macro.md"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try "---\nkeyword: ;sig\n---\nBody\n".write(
+            to: directory.appendingPathComponent("sig.md"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let scan = SnippetLibrary.scan(from: directory)
+
+        #expect(scan.snippets.map(\.keyword) == [";sig"])
+        #expect(scan.invalid.map(\.name) == ["macro", "plain"])
         #expect(
-            SnippetLibrary.load(from: URL(fileURLWithPath: "/nonexistent-heycast/snippets")).isEmpty
+            scan.invalid.map(\.reason) == [
+                "Unknown type “macro”. Use text or script.",
+                "No front matter; start the file with ---.",
+            ]
+        )
+    }
+
+    @Test func validationNamesTheProblem() {
+        #expect(
+            SnippetLibrary.validate("Just text\n", url: fileURL)
+                == .failure(.missingFrontMatter)
+        )
+        #expect(
+            SnippetLibrary.validate("---\nname: Nameless\n---\nBody\n", url: fileURL)
+                == .failure(.missingKeyword)
+        )
+        #expect(
+            SnippetLibrary.validate(
+                "---\nkeyword: ;empty\n---\n",
+                url: fileURL
+            ) == .failure(.emptyBody)
+        )
+        #expect(
+            SnippetLibrary.validate(
+                "---\nkeyword: ;x\ntype: macro\n---\nBody\n",
+                url: fileURL
+            ) == .failure(.unknownType("macro"))
         )
     }
 }

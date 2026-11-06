@@ -32,6 +32,7 @@ final class PaletteModel: ObservableObject {
     private var usage = UsageRanking.empty
     private var applications: [LaunchableApp] = []
     private var snippets: [Snippet] = []
+    private var invalidSnippets: [InvalidSnippet] = []
     private var scanTask: Task<Void, Never>?
     private var scanAgain = false
 
@@ -51,7 +52,7 @@ final class PaletteModel: ObservableObject {
     func setSnippetsDirectory(_ url: URL) {
         guard url.standardizedFileURL != snippetsDirectory.standardizedFileURL else { return }
         snippetsDirectory = url
-        snippets = SnippetLibrary.load(from: url)
+        loadSnippets()
         updateResults()
     }
 
@@ -60,11 +61,17 @@ final class PaletteModel: ObservableObject {
         usage = usageStore.ranking()
         // Snippets are re-read on every open, so editing a file shows up
         // without restarting the app.
-        snippets = SnippetLibrary.load(from: snippetsDirectory)
+        loadSnippets()
         query = ""
         selectionIndex = 0
         updateResults()
         refreshApplications()
+    }
+
+    private func loadSnippets() {
+        let scan = SnippetLibrary.scan(from: snippetsDirectory)
+        snippets = scan.snippets
+        invalidSnippets = scan.invalid
     }
 
     /// Rescans the install roots on every open, so an app installed while
@@ -115,6 +122,7 @@ final class PaletteModel: ObservableObject {
         results = PaletteSearch.rank(
             applications: scope == .all ? applications : [],
             snippets: snippets,
+            invalidSnippets: scope == .snippets ? invalidSnippets : [],
             matching: query,
             usage: usage
         )
@@ -250,8 +258,11 @@ struct PaletteView: View {
     }
 
     private var actionHintText: String {
+        if model.selected?.invalidSnippet != nil {
+            return "⌘↩ reveal   esc close"
+        }
         if model.selected?.snippet != nil {
-            return "↑↓ select   ↩ paste   esc close"
+            return "↑↓ select   ↩ paste   ⌘↩ reveal   esc close"
         }
         return "↑↓ select   ↩ open   esc close"
     }
@@ -313,6 +324,13 @@ private struct PaletteRow: View {
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(isSelected ? .white.opacity(0.85) : .secondary)
                         .lineLimit(1)
+                } else if let issue = item.invalidSnippet {
+                    Text(issue.reason)
+                        .font(.system(size: 11))
+                        .foregroundStyle(isSelected ? .white.opacity(0.9) : .orange)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(issue.reason)
                 }
             }
             .padding(.horizontal, 10)
@@ -337,6 +355,10 @@ private struct PaletteRow: View {
             Image(systemName: snippet.isScript ? "terminal" : "text.quote")
                 .font(.system(size: 15))
                 .foregroundStyle(isSelected ? .white : .secondary)
+        case .invalidSnippet:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(isSelected ? .white : .orange)
         }
     }
 }

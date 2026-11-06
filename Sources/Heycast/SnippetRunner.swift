@@ -1,3 +1,4 @@
+import AppKit
 import Darwin
 import Foundation
 
@@ -45,7 +46,14 @@ enum SnippetRunner {
     static func resolve(_ snippet: Snippet, timeout: TimeInterval = defaultTimeout) async throws -> String {
         switch snippet.source {
         case .text:
-            return snippet.body
+            // Placeholders expand here, at trigger time, so the date, time and
+            // clipboard reflect the moment of use, not when the file was read.
+            return SnippetPlaceholders.expand(
+                snippet.body,
+                at: Date(),
+                clipboard: { NSPasteboard.general.string(forType: .string) },
+                uuid: { UUID() }
+            )
         case .inlineScript:
             try checkOwnership(of: snippet.url)
             return try await offMain { try runInline(snippet.body, timeout: timeout) }

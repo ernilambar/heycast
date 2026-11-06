@@ -132,7 +132,22 @@ final class PaletteController: NSObject, NSWindowDelegate {
             launch(app)
         case .snippet(let snippet):
             paste(snippet)
+        case .invalidSnippet(let issue):
+            // Nothing to paste; show the file that needs fixing.
+            hide()
+            NSWorkspace.shared.activateFileViewerSelecting([issue.url])
         }
+    }
+
+    /// ⌘↩ on a snippet row reveals its Markdown file. Applications keep their
+    /// current behaviour until the row actions phase.
+    private func revealSelection() {
+        guard let url = model.selected?.snippetFileURL else {
+            NSSound.beep()
+            return
+        }
+        hide()
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     private func launch(_ app: LaunchableApp) {
@@ -278,6 +293,11 @@ final class PaletteController: NSObject, NSWindowDelegate {
 
         if event.keyCode == 53, modifiers.isEmpty { // esc
             hide()
+            return true
+        }
+
+        if (event.keyCode == 36 || event.keyCode == 76), modifiers == .command {
+            revealSelection()
             return true
         }
 

@@ -110,7 +110,7 @@ final class SnippetExpander {
     }
 
     func reload() {
-        index = SnippetIndex(snippets: SnippetLibrary.load(from: directory))
+        index = SnippetIndex(snippets: SnippetLibrary.scan(from: directory).snippets)
     }
 
     /// Re-points the expander at the folder `config.json` now names, without a

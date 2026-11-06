@@ -149,8 +149,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @discardableResult
     private func logSnippetsDirectory(_ directory: URL) -> URL {
-        let count = SnippetLibrary.load(from: directory).count
-        NSLog("Heycast: snippets directory: %@ (%d snippets)", directory.path, count)
+        let scan = SnippetLibrary.scan(from: directory)
+        NSLog(
+            "Heycast: snippets directory: %@ (%d snippets, %d invalid)",
+            directory.path,
+            scan.snippets.count,
+            scan.invalid.count
+        )
         return directory
     }
 

@@ -13,7 +13,8 @@ account, no telemetry.
   rescans every time it opens, so an app installed a minute ago is there.
 - **Paste snippets.** `⌥⇧Space` searches snippets only. Snippets are Markdown
   files with a keyword; type the keyword in any app to expand it in place, or
-  pick it from the palette. Your previous clipboard comes back afterwards.
+  pick it from the palette. `{date}`, `{time}`, `{clipboard}` and `{uuid}`
+  fill in at paste time, and your previous clipboard comes back afterwards.
 - **Arrange windows.** `⌃⌥` plus an arrow snaps the focused window to that
   half, `⌃⌥↩` maximizes and `⌃⌥C` centers it.
 - **Stay out of the way.** Menu bar only: no Dock icon, no main window, no

@@ -251,7 +251,7 @@ Sources/Heycast/
   PaletteController.swift NSPanel configuration, placement, resize, launching
   PaletteView.swift      SwiftUI palette content, scope, results list + model
   ApplicationCatalog.swift  installed app scan and match ranking
-  Snippet.swift          snippet front matter, folder loading
+  Snippet.swift          snippet front matter, scan/validation, placeholders
   SnippetExpander.swift  typed-keyword matching and expansion event tap
   SyntheticKeyboard.swift synthesized backspaces and ⌘V for snippets
   PaletteSearch.swift    merged app + snippet ranking for the palette

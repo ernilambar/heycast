@@ -12,10 +12,14 @@
 
 ## Ranking
 
-- Match tiers, best first: exact, prefix, acronym, word-prefix, substring,
-  subsequence. Usage breaks ties inside a tier.
+- Applications use name tiers, best first: exact, prefix, acronym,
+  word-prefix, substring, subsequence. Usage breaks ties inside a tier.
+- A snippet matches only when the query is exactly its keyword,
+  case-sensitive. Its title is display-only; there is no fuzzy matching.
+- Invalid snippet files appear after the results in the snippets scope, with
+  the validation reason, and `⌘↩` reveals them in Finder.
 - Empty query: frequently and recently launched apps first, then the rest
-  alphabetically.
+  alphabetically, then snippets by keyword, then invalid files by filename.
 - The panel grows from one to seven visible rows, then scrolls.
 
 ## Usage history
