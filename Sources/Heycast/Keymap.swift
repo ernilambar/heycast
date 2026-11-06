@@ -56,6 +56,15 @@ enum KeymapAction: Hashable, CaseIterable, Sendable {
         case .window: nil
         }
     }
+
+    /// Row label in the settings window, where every action is listed.
+    var settingsTitle: String {
+        switch self {
+        case .palette: "Open Palette"
+        case .snippets: "Open Snippets"
+        case .window(let action): "Window: \(action.title)"
+        }
+    }
 }
 
 /// Resolved global shortcuts for every known action.

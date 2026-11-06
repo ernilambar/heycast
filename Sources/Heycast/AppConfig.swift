@@ -2,8 +2,9 @@ import Foundation
 
 /// User-owned settings read from `config.json` in `SupportDirectory`.
 ///
-/// Heycast reads this file at startup and never writes it; the status-bar menu
-/// seeds a template the first time you open it.
+/// The file is the source of truth: Heycast reads it at startup, the settings
+/// window writes it atomically, and an external edit is picked up without a
+/// relaunch. Unknown keys survive a settings save untouched.
 struct AppConfig: Decodable {
     /// Global shortcuts keyed by action name, e.g.
     /// `{"palette": "cmd+space", "snippets": "alt+space"}`.
@@ -122,8 +123,8 @@ extension AppConfig {
     }
 
     /// Creates the support folder and seeds a template when the file does not
-    /// exist yet, then returns the file to edit. The app writes config only
-    /// when asked from the menu.
+    /// exist yet, then returns the file to edit. "Edit Config…" uses this; the
+    /// settings window writes through `save` instead.
     static func prepareForEditing(at url: URL = SupportDirectory.configFile) throws -> URL {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
@@ -133,6 +134,40 @@ extension AppConfig {
             try template().write(to: url, options: .atomic)
         }
         return url
+    }
+
+    /// Writes the settings the window owns, leaving every other key in the
+    /// file alone. Atomic, so a failed write leaves the previous config in
+    /// place and the running app never sees a half-written file.
+    static func save(
+        keymaps: [String: String],
+        snippetsDirectory: String?,
+        at url: URL = SupportDirectory.configFile
+    ) throws {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+
+        var object: [String: Any] = [:]
+        if let data = try? Data(contentsOf: url),
+           let existing = try? JSONSerialization.jsonObject(with: data),
+           let dictionary = existing as? [String: Any] {
+            object = dictionary
+        }
+
+        object["keymaps"] = keymaps
+        if let snippetsDirectory, !snippetsDirectory.isEmpty {
+            object["snippetsDirectory"] = snippetsDirectory
+        } else {
+            object.removeValue(forKey: "snippetsDirectory")
+        }
+
+        let data = try JSONSerialization.data(
+            withJSONObject: object,
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        )
+        try data.write(to: url, options: .atomic)
     }
 
     /// `_comment` is ignored by the decoder; it documents the real keys in
@@ -148,10 +183,10 @@ extension AppConfig {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try encoder.encode(
             ConfigTemplate(
-                comment: "Bind commands under keymaps by action name; an empty string disables one. Window commands are window.left, window.right, window.top, window.bottom, window.topLeft, window.topRight, window.bottomLeft, window.bottomRight, window.maximize and window.center. snippetsDirectory is optional. Restart Heycast after editing.",
+                comment: "Bind commands under keymaps by action name; an empty string disables one. Window commands are window.left, window.right, window.top, window.bottom, window.topLeft, window.topRight, window.bottomLeft, window.bottomRight, window.maximize and window.center. snippetsDirectory is optional. The Settings window edits this file; changes apply immediately.",
                 keymaps: [
-                    "palette": "cmd+space",
-                    "snippets": "alt+space",
+                    "palette": "alt+space",
+                    "snippets": "alt+shift+space",
                     "window.left": "ctrl+alt+left",
                     "window.right": "ctrl+alt+right",
                     "window.top": "ctrl+alt+up",

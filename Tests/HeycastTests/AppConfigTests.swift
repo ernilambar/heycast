@@ -82,8 +82,8 @@ private func temporaryDirectory() throws -> URL {
         let seeded = AppConfig.load(from: file)
         #expect(seeded.snippetsDirectory != nil)
         #expect(seeded.keymaps == [
-            "palette": "cmd+space",
-            "snippets": "alt+space",
+            "palette": "alt+space",
+            "snippets": "alt+shift+space",
             "window.left": "ctrl+alt+left",
             "window.right": "ctrl+alt+right",
             "window.top": "ctrl+alt+up",
@@ -98,5 +98,32 @@ private func temporaryDirectory() throws -> URL {
             .write(to: file, atomically: true, encoding: .utf8)
         _ = try AppConfig.prepareForEditing(at: file)
         #expect(AppConfig.load(from: file).snippetsDirectory == "custom")
+    }
+
+    @Test func savePreservesUnknownKeysAndRoundTrips() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("config.json")
+        try #"{"_comment":"keep me","unrelated":{"nested":true},"keymaps":{"palette":"cmd+k"}}"#
+            .write(to: file, atomically: true, encoding: .utf8)
+
+        try AppConfig.save(
+            keymaps: ["palette": "alt+space", "snippets": ""],
+            snippetsDirectory: "/tmp/snippets",
+            at: file
+        )
+
+        let config = AppConfig.load(from: file)
+        #expect(config.keymaps == ["palette": "alt+space", "snippets": ""])
+        #expect(config.snippetsDirectory == "/tmp/snippets")
+        #expect(config.resolvedKeymap()[.palette] == .default)
+        #expect(config.resolvedKeymap()[.snippets] == nil)
+
+        let object = try JSONSerialization.jsonObject(
+            with: Data(contentsOf: file)
+        ) as? [String: Any]
+        #expect(object?["_comment"] as? String == "keep me")
+        #expect((object?["unrelated"] as? [String: Any])?["nested"] as? Bool == true)
     }
 }

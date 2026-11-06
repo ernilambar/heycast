@@ -1,90 +1,88 @@
 # heycast
 
 A menu-bar launcher for everyday Mac work: one shortcut opens apps, pastes
-snippets, and snaps windows; nothing leaves your Mac and there is no account.
+snippets and snaps windows. Small, native, local-first — plain files, no
+account, no telemetry.
 
-Press `⌘Space` anywhere, type a few letters, hit `↩`, and the app you meant
-opens. Press `⌥Space` to search snippets only. `⌃⌥` plus an arrow snaps the
-focused window. Heycast lives in the menu bar — no Dock icon, no main window.
+![The palette filtering applications as you type](docs/demo.gif)
 
-## Install
+## What it does
 
-Requires macOS 14 or later, Apple silicon.
+- **Launch apps.** Press `⌥Space`, type a few letters, hit `↩`. The palette
+  reads `/Applications`, `/System/Applications` and `~/Applications`, and
+  rescans every time it opens, so an app installed a minute ago is there.
+- **Paste snippets.** `⌥⇧Space` searches snippets only. Snippets are Markdown
+  files with a keyword; type the keyword in any app to expand it in place, or
+  pick it from the palette. Your previous clipboard comes back afterwards.
+- **Arrange windows.** `⌃⌥` plus an arrow snaps the focused window to that
+  half, `⌃⌥↩` maximizes and `⌃⌥C` centers it.
+- **Stay out of the way.** Menu bar only: no Dock icon, no main window, no
+  queue of notifications.
 
-### Homebrew (recommended)
+## Install (30 seconds)
+
+Requires macOS 14 or later on Apple silicon, and Homebrew 7 or later.
 
 ```sh
+brew trust ernilambar/tap
 brew install --cask ernilambar/tap/heycast
 ```
 
-Upgrade with `brew upgrade --cask heycast`. `brew uninstall --zap --cask heycast`
-also removes the app's files.
+Both commands are required. Homebrew 7 refuses an untrusted tap, so the
+one-line install fails on a fresh machine. The cask removes the download
+quarantine flag; the app is not notarized and `spctl` rejects it by design, so
+the tap is the only supported install. There is no zip download.
 
-### Manual
-
-- Download `Heycast-macos-arm64.zip` from the
-  [latest release](https://github.com/ernilambar/heycast/releases/latest), unzip
-  it and move `Heycast.app` to `/Applications`.
-- The build is ad-hoc signed and not notarized, so Gatekeeper blocks the first
-  launch. Clear the download quarantine once after moving the app:
-
-  ```sh
-  xattr -dr com.apple.quarantine /Applications/Heycast.app
-  ```
-
-  Alternatively, open the app once and allow it in System Settings → Privacy &
-  Security → "Open Anyway".
-
-### From source
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-After installing, Heycast starts in the menu bar. There is nothing to launch
-from Launchpad or Finder.
+Upgrade with `brew upgrade --cask heycast`. Remove the app and its files with
+`brew uninstall --zap --cask heycast`.
 
 ## Use
 
-- `⌘Space` toggles the palette from any app.
-- `⌥Space` opens the palette with snippets only.
+- `⌥Space` toggles the palette from any app.
+- `⌥⇧Space` opens the palette with snippets only.
 - `⌃⌥` plus an arrow fills that half of the screen, `⌃⌥↩` maximizes and
   `⌃⌥C` centers the focused window. All shortcuts are configurable; see
   [docs/keymaps.md](docs/keymaps.md).
-- Click the menu-bar item to toggle the full palette.
-- Right-click the menu-bar item for "Open Palette", "Open Snippets",
-  "Window", "Edit Config…", "Permissions…", "About Heycast" and
-  "Quit Heycast".
+- Click the menu-bar item to toggle the palette.
+- Right-click the menu-bar item for Settings, "Launch at Login",
+  "Permissions…", the Window submenu and "Edit Config…".
 - `↑`/`↓` moves the selection, `↩` launches the selected app or pastes the
   selected snippet, clicking a row does the same, `esc` or focusing another app
   closes the palette.
 - Typing a snippet keyword in any app expands it in place; this needs
   Accessibility.
 
-## Search
+## Settings
 
-Type to filter apps in `/Applications`, `/System/Applications` and
-`~/Applications`, plus snippets. Frequently and recently launched apps rank
-higher. Details: [docs/search.md](docs/search.md).
-
-## Config
+Settings edits `config.json` for you: record a shortcut, choose the snippets
+folder, and turn Launch at Login on or off. Changes save atomically and apply
+immediately — the new shortcut works and the new snippets folder is read
+without relaunching. "Edit Config…" still opens the same file for keys that
+have no UI.
 
 All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
-`config.json` there is optional, read at launch and never written by the app; "Edit Config…" seeds a
-template and opens it in your default editor. Edits take effect on the next
-launch.
 
 ```json
 {
   "keymaps": {
-    "palette": "cmd+space",
-    "snippets": "alt+space"
+    "palette": "alt+space",
+    "snippets": "alt+shift+space"
   },
   "snippetsDirectory": "~/Documents/heycast-snippets"
 }
 ```
 
-- `keymaps`: global shortcuts. See [docs/keymaps.md](docs/keymaps.md).
+- `keymaps`: global shortcuts. An empty string disables an action. See
+  [docs/keymaps.md](docs/keymaps.md).
 - `snippetsDirectory`: snippets folder. See
   [docs/snippets.md](docs/snippets.md#location).
+
+## Search
+
+Type to filter apps in `/Applications`, `/System/Applications` and
+`~/Applications`, plus snippets. Frequently and recently launched apps rank
+higher, and the catalog is rescanned on every palette open. Details:
+[docs/search.md](docs/search.md).
 
 ## Snippets
 
@@ -104,13 +102,13 @@ Nilambar Sharma
 
 ## Permissions
 
-Heycast asks for one grant: **Accessibility**. It powers inline snippet
-expansion, snippet pasting (Heycast types ⌘V for you) and moving or resizing
-other apps' windows. Global hotkeys need no grant. The first-run wizard walks
-through it; reopen it from "Permissions…".
+Heycast asks for one grant: **Accessibility**. It powers snippet pasting and
+expansion (Heycast types on your behalf) and moving or resizing other apps'
+windows. Global hotkeys and app launching need no grant.
 
-No consent prompt? Move Heycast into `/Applications` and reopen it. Build and
-signing caveats live in [CONTRIBUTING.md](CONTRIBUTING.md).
+Nothing is requested at launch: the setup window opens the first time you use
+a snippet or a window command, and "Permissions…" reopens it at any time.
+Launch at Login is a separate toggle in Settings and the menu-bar item.
 
 ## License
 

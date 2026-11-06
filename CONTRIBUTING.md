@@ -18,7 +18,7 @@ make test              # unit tests (Swift Testing)
 make bundle            # release .app, -macos-arm64.zip and SHA256SUMS under dist/
 make bundle-release    # the same bundle, signing with the release identity only
 make stop              # quit a running instance
-make reset-permissions # clear TCC answers + the first-run flag
+make reset-permissions # clear TCC answers + the setup-complete flag
 make dev-cert          # one-time: stable signing identity so grants survive rebuilds
 make release-cert      # one-time: the "Heycast" identity that signs every release
 make clean
@@ -50,6 +50,11 @@ the action name used in `config.json`, its optional default shortcut and its
 menu title. `AppConfig.resolvedKeymap()` resolves configured bindings, rejects
 invalid and duplicate combinations, and yields the `Keymap` that
 `AppDelegate` registers through one `HotKeyController` per action.
+`AppDelegate.applyConfig()` repeats that resolution whenever `config.json`
+changes (the settings window writes it atomically, and a directory watcher
+catches hand edits), re-registering only when the keymap actually differs.
+`SystemShortcuts` lists the combinations macOS owns; the settings window shows
+those conflicts and any `RegisterEventHotKey` failure with a Change action.
 
 To add a command (window management, for example): add a `KeymapAction` case,
 give it a `defaultShortcut` or leave it `nil` to require an explicit bind, set
@@ -63,8 +68,8 @@ rather than nesting objects, so resolution remains a single
 ```json
 {
   "keymaps": {
-    "palette": "cmd+space",
-    "snippets": "alt+space",
+    "palette": "alt+space",
+    "snippets": "alt+shift+space",
     "window.left": "ctrl+alt+left",
     "window.right": "ctrl+alt+right",
     "window.top": "ctrl+alt+up",
@@ -84,6 +89,10 @@ hotkey.
 The app needs one grant today: **Accessibility**, used for inline snippet
 expansion and for typing ⌘V into the app in front after the palette copies a
 snippet body.
+
+The setup window does not open at launch. It opens the first time a snippet or
+window command needs Accessibility, and from "Permissions…" in the menu-bar
+item; the setup-complete flag is written only when the wizard is finished.
 
 - The global hotkeys need no grant: Carbon `RegisterEventHotKey` is delivered
   by the window server.
@@ -110,7 +119,7 @@ snippet body.
   macOS offers "Quit & Reopen" for screen recording; full disk access is
   granted by adding the app with `+` in the pane.
 - `make reset-permissions` runs `tccutil reset All <bundle id>` and forgets
-  the first-run flag.
+  the setup-complete flag.
 
 ## Icon
 
@@ -236,7 +245,8 @@ Sources/Heycast/
   SupportDirectory.swift Application Support namespace, file locations
   AppConfig.swift        config.json loading, keymap resolution, snippets path
   Keymap.swift           keymap actions, defaults, resolved shortcut map
-  HotKey.swift           hotkey parsing, display and menu key equivalent
+  HotKey.swift           hotkey parsing, display, serialization and menu key equivalent
+  SystemShortcuts.swift  shortcuts macOS already owns, checked by the settings window
   StatusBarIcon.swift    template H mark for the menu-bar item
   PaletteController.swift NSPanel configuration, placement, resize, launching
   PaletteView.swift      SwiftUI palette content, scope, results list + model
@@ -247,6 +257,11 @@ Sources/Heycast/
   PaletteSearch.swift    merged app + snippet ranking for the palette
   UsageStore.swift       persisted launch counts and recency, usage scoring
   HotKeyController.swift global hotkeys via Carbon RegisterEventHotKey
+  LoginItem.swift        Launch at Login through SMAppService
+  SettingsModel.swift    settings rows, hotkey recorder, atomic config writes
+  SettingsView.swift     settings window content
+  SettingsController.swift  settings window lifecycle
+  Clipboard.swift        pasteboard snapshot restored after a snippet paste
   Permission.swift       TCC permissions: status checks, requests, panes
   PermissionWizardModel.swift  wizard steps, refresh on app activation
   PermissionWizardView.swift   wizard pages + summary

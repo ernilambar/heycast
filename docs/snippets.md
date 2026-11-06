@@ -19,7 +19,8 @@ Nilambar
   default entirely and is created if missing. `~` expands; a relative path
   resolves against the config file's directory; a symlinked folder works.
 - A path that cannot be created is logged and ignored in favour of the default.
-- Changing `snippetsDirectory` takes effect on the next launch.
+- Changing `snippetsDirectory` applies immediately: Settings writes the config,
+  and the expander and palette follow the new folder without a relaunch.
 - Flat folder: only top-level `.md` files load. Hidden files are ignored.
 - Edits apply on the next palette open or folder change. No restart needed.
 

@@ -14,17 +14,20 @@ struct HotKey: Hashable, Sendable {
     /// Human-readable key name used in logs and the shortcut display.
     let keyName: String
 
+    /// `⌥Space` opens the palette. Never `⌘Space` (Spotlight) or `⌃Space`
+    /// (input sources): macOS owns both, so a launcher binding there would
+    /// shadow a system shortcut on every default install.
     static let `default` = HotKey(
         keyCode: UInt32(kVK_Space),
-        modifiers: UInt32(cmdKey),
+        modifiers: UInt32(optionKey),
         keyEquivalent: " ",
         keyName: "Space"
     )
 
-    /// `⌥Space` opens the palette limited to snippets.
+    /// `⌥⇧Space` opens the palette limited to snippets.
     static let snippetDefault = HotKey(
         keyCode: UInt32(kVK_Space),
-        modifiers: UInt32(optionKey),
+        modifiers: UInt32(optionKey | shiftKey),
         keyEquivalent: " ",
         keyName: "Space"
     )
@@ -42,6 +45,18 @@ struct HotKey: Hashable, Sendable {
 
     /// Shortcut as shown in logs, e.g. `⌃Space` or `⌘⇧K`.
     var displayString: String { modifierSymbols + keyName }
+
+    /// Inverse of `parse`, e.g. `"ctrl+alt+left"`. The settings window writes
+    /// this back to `config.json`, so one parser serves both directions.
+    var configString: String {
+        var parts: [String] = []
+        if modifiers & UInt32(controlKey) != 0 { parts.append("ctrl") }
+        if modifiers & UInt32(optionKey) != 0 { parts.append("alt") }
+        if modifiers & UInt32(shiftKey) != 0 { parts.append("shift") }
+        if modifiers & UInt32(cmdKey) != 0 { parts.append("cmd") }
+        parts.append(Self.keyTable.tokensByCode[Int(keyCode)] ?? keyName.lowercased())
+        return parts.joined(separator: "+")
+    }
 
     /// AppKit modifier flags matching `modifiers`, for the menu item.
     var menuModifiers: NSEvent.ModifierFlags {
@@ -76,13 +91,28 @@ struct HotKey: Hashable, Sendable {
         }
 
         guard let keyToken,
-              let key = keys[keyToken],
+              let key = keyTable.byToken[keyToken],
               modifiers & primaryModifiers != 0
         else { return nil }
 
         return HotKey(
             keyCode: UInt32(key.keyCode),
             modifiers: modifiers,
+            keyEquivalent: key.equivalent,
+            keyName: key.name
+        )
+    }
+
+    /// Shortcut from a recorded key press. Applies the same rules as `parse`
+    /// so the recorder cannot create a binding the parser would reject.
+    static func from(keyCode: UInt32, modifiers: UInt32) -> HotKey? {
+        guard modifiers & primaryModifiers != 0,
+              let key = keyTable.byCode[Int(keyCode)]
+        else { return nil }
+
+        return HotKey(
+            keyCode: keyCode,
+            modifiers: modifiers & knownModifiers,
             keyEquivalent: key.equivalent,
             keyName: key.name
         )
@@ -99,6 +129,10 @@ struct HotKey: Hashable, Sendable {
 
     private static var primaryModifiers: UInt32 {
         UInt32(controlKey) | UInt32(optionKey) | UInt32(cmdKey)
+    }
+
+    private static var knownModifiers: UInt32 {
+        primaryModifiers | UInt32(shiftKey)
     }
 
     private static let modifierAliases: [String: UInt32] = [
@@ -118,10 +152,20 @@ struct HotKey: Hashable, Sendable {
         let equivalent: String?
     }
 
+    /// One table serves parsing, recording and serialization: the first alias
+    /// is the token `configString` writes back.
+    private struct KeyTable: Sendable {
+        let byToken: [String: KeyDefinition]
+        let byCode: [Int: KeyDefinition]
+        let tokensByCode: [Int: String]
+    }
+
     /// Key tokens are US-layout positions because Carbon hotkeys are physical
     /// key codes; the same shortcut triggers the same key on every layout.
-    private static let keys: [String: KeyDefinition] = {
-        var keys: [String: KeyDefinition] = [:]
+    private static let keyTable: KeyTable = {
+        var byToken: [String: KeyDefinition] = [:]
+        var byCode: [Int: KeyDefinition] = [:]
+        var tokensByCode: [Int: String] = [:]
 
         func add(
             _ aliases: [String],
@@ -135,8 +179,10 @@ struct HotKey: Hashable, Sendable {
                 equivalent: equivalent
             )
             for alias in aliases {
-                keys[alias] = definition
+                byToken[alias] = definition
             }
+            byCode[keyCode] = definition
+            tokensByCode[keyCode] = aliases[0]
         }
 
         let letters: [(Int, String)] = [
@@ -223,6 +269,10 @@ struct HotKey: Hashable, Sendable {
             )
         }
 
-        return keys
+        return KeyTable(
+            byToken: byToken,
+            byCode: byCode,
+            tokensByCode: tokensByCode
+        )
     }()
 }

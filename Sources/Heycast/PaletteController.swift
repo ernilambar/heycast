@@ -71,11 +71,18 @@ final class PaletteController: NSObject, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
-        // Scan at launch so the first palette open already has results.
-        model.loadApplicationsIfNeeded()
+        // Scan once at launch so the first palette open already has results;
+        // every open rescans in the background.
+        model.refreshApplications()
     }
 
     var isVisible: Bool { panel.isVisible }
+
+    /// Re-points the palette at the folder `config.json` now names; the next
+    /// open reads snippets from there without a relaunch.
+    func setSnippetsDirectory(_ url: URL) {
+        model.setSnippetsDirectory(url)
+    }
 
     func toggle(scope: PaletteScope = .all) {
         if isVisible, activeScope == scope {
@@ -166,8 +173,10 @@ final class PaletteController: NSObject, NSWindowDelegate {
 
     private func paste(_ text: String, keyword: String, into target: NSRunningApplication?) {
         let pasteboard = NSPasteboard.general
+        let previousClipboard = ClipboardSnapshot.capture(from: pasteboard)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let snippetChangeCount = pasteboard.changeCount
 
         guard AXIsProcessTrusted() else {
             NSLog(
@@ -185,6 +194,13 @@ final class PaletteController: NSObject, NSWindowDelegate {
 
         whenActive(target) {
             SyntheticKeyboard.postPaste()
+            // Restore only after the target has read the snippet. A user copy
+            // in the meantime bumps the change count and wins.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                MainActor.assumeIsolated {
+                    previousClipboard.restore(ifChangeCountIs: snippetChangeCount)
+                }
+            }
         }
         target.activate(from: .current)
     }

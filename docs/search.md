@@ -5,8 +5,10 @@
 - `.app` bundles under `/Applications`, `/System/Applications` and
   `~/Applications`, including symlinked bundles such as Safari.
 - Snippets from the snippets folder. See [snippets.md](snippets.md).
-- The app scan runs in the background the first time the palette opens.
-- Apps installed after Heycast starts appear on the next launch.
+- Every palette open rescans the install roots in the background, so an app
+  installed while Heycast runs appears on the next open. Opens that arrive
+  during a scan collapse into one follow-up scan.
+- Icons are cached per bundle, so a rescan does not re-render the list.
 
 ## Ranking
 

@@ -28,11 +28,12 @@ final class PaletteModel: ObservableObject {
     @Published private(set) var scope: PaletteScope = .all
 
     private let usageStore: UsageStore
-    private let snippetsDirectory: URL
+    private var snippetsDirectory: URL
     private var usage = UsageRanking.empty
     private var applications: [LaunchableApp] = []
     private var snippets: [Snippet] = []
-    private var hasLoadedApplications = false
+    private var scanTask: Task<Void, Never>?
+    private var scanAgain = false
 
     init(
         usageStore: UsageStore = .shared,
@@ -46,6 +47,14 @@ final class PaletteModel: ObservableObject {
         results.indices.contains(selectionIndex) ? results[selectionIndex] : nil
     }
 
+    /// Follows a changed `snippetsDirectory` without a relaunch.
+    func setSnippetsDirectory(_ url: URL) {
+        guard url.standardizedFileURL != snippetsDirectory.standardizedFileURL else { return }
+        snippetsDirectory = url
+        snippets = SnippetLibrary.load(from: url)
+        updateResults()
+    }
+
     func reset(scope: PaletteScope = .all) {
         self.scope = scope
         usage = usageStore.ranking()
@@ -55,19 +64,36 @@ final class PaletteModel: ObservableObject {
         query = ""
         selectionIndex = 0
         updateResults()
-        loadApplicationsIfNeeded()
+        refreshApplications()
     }
 
-    func loadApplicationsIfNeeded() {
-        guard !hasLoadedApplications else { return }
-        hasLoadedApplications = true
-        isLoading = true
+    /// Rescans the install roots on every open, so an app installed while
+    /// Heycast runs appears the next time the palette opens. Opens that arrive
+    /// during a scan collapse into one follow-up scan.
+    func refreshApplications() {
+        guard scanTask == nil else {
+            scanAgain = true
+            return
+        }
 
-        Task {
+        isLoading = applications.isEmpty
+        scanTask = Task { [weak self] in
             let apps = await ApplicationCatalog.load()
-            applications = apps
-            isLoading = false
-            updateResults()
+            guard let self else { return }
+            self.scanTask = nil
+            NSLog("Heycast: catalog: %d applications", apps.count)
+
+            if apps != self.applications {
+                let previousSelection = self.selected
+                self.applications = apps
+                self.updateResults(keepingSelection: previousSelection)
+            }
+            self.isLoading = false
+
+            if self.scanAgain {
+                self.scanAgain = false
+                self.refreshApplications()
+            }
         }
     }
 
@@ -82,14 +108,22 @@ final class PaletteModel: ObservableObject {
         selectionIndex = index
     }
 
-    private func updateResults() {
+    /// Re-ranks after a query or catalog change. A background rescan keeps the
+    /// highlighted row when it still exists, so typing during a scan is not
+    /// interrupted by the selection jumping back to the first result.
+    private func updateResults(keepingSelection selected: PaletteItem? = nil) {
         results = PaletteSearch.rank(
             applications: scope == .all ? applications : [],
             snippets: snippets,
             matching: query,
             usage: usage
         )
-        selectionIndex = 0
+
+        if let selected, let index = results.firstIndex(of: selected) {
+            selectionIndex = index
+        } else {
+            selectionIndex = 0
+        }
     }
 }
 

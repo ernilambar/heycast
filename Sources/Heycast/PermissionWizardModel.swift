@@ -3,9 +3,16 @@ import SwiftUI
 
 /// Drives the permission wizard: which step is showing, what each permission
 /// currently reports, and the in-flight consent request.
+///
+/// The wizard never opens by itself at launch: Accessibility is only needed
+/// for snippets and window commands, so it is offered the first time one of
+/// those is used, and always from the menu.
 @MainActor
 final class PermissionWizardModel: ObservableObject {
     enum Step: Equatable {
+        /// Shown when the app runs from outside `/Applications`, where macOS
+        /// registers permissions against a path that a later move breaks.
+        case moveToApplications
         case permission(Permission)
         case summary
     }
@@ -15,7 +22,9 @@ final class PermissionWizardModel: ObservableObject {
     @Published private(set) var statuses: [Permission: PermissionStatus] = [:]
     @Published private(set) var step: Step = .permission(.accessibility)
     @Published private(set) var pending: Permission?
+    @Published private(set) var launchAtLogin: LoginItem.State = .disabled
 
+    private var steps: [Step] = []
     private var activationObserver: Any?
 
     var currentPermission: Permission? {
@@ -25,15 +34,11 @@ final class PermissionWizardModel: ObservableObject {
 
     var isSummary: Bool { step == .summary }
 
-    var totalSteps: Int { permissions.count + 1 }
+    var totalSteps: Int { steps.isEmpty ? permissions.count + 1 : steps.count }
 
     var stepNumber: Int {
-        switch step {
-        case .permission(let permission):
-            (permissions.firstIndex(of: permission) ?? 0) + 1
-        case .summary:
-            totalSteps
-        }
+        guard let index = steps.firstIndex(of: step) else { return 1 }
+        return index + 1
     }
 
     var stepFraction: Double { Double(stepNumber) / Double(totalSteps) }
@@ -48,10 +53,20 @@ final class PermissionWizardModel: ObservableObject {
         statuses[permission] ?? .notDetermined
     }
 
+    /// macOS keys a grant to the bundle path, so a copy running from a build
+    /// folder or a Downloads unzip gets a grant that a later move loses.
+    nonisolated static func needsMoveToApplications(for bundleURL: URL = Bundle.main.bundleURL) -> Bool {
+        let path = bundleURL.standardizedFileURL.path
+        return path != "/Applications" && !path.hasPrefix("/Applications/")
+    }
+
     // MARK: - Lifecycle
 
     func start() {
-        step = .permission(permissions[0])
+        steps = (Self.needsMoveToApplications() ? [.moveToApplications] : [])
+            + permissions.map(Step.permission)
+            + [.summary]
+        step = steps.first ?? .summary
         pending = nil
         refresh()
         // Permissions are granted in System Settings, so the app loses focus
@@ -76,24 +91,14 @@ final class PermissionWizardModel: ObservableObject {
 
     func advance() {
         refresh()
-        switch step {
-        case .permission(let permission):
-            let index = permissions.firstIndex(of: permission) ?? 0
-            step = index + 1 < permissions.count ? .permission(permissions[index + 1]) : .summary
-        case .summary:
-            break
-        }
+        guard let index = steps.firstIndex(of: step), index + 1 < steps.count else { return }
+        step = steps[index + 1]
     }
 
     func back() {
         refresh()
-        switch step {
-        case .permission(let permission):
-            let index = permissions.firstIndex(of: permission) ?? 0
-            if index > 0 { step = .permission(permissions[index - 1]) }
-        case .summary:
-            step = .permission(permissions[permissions.count - 1])
-        }
+        guard let index = steps.firstIndex(of: step), index > 0 else { return }
+        step = steps[index - 1]
     }
 
     func jump(to permission: Permission) {
@@ -109,6 +114,7 @@ final class PermissionWizardModel: ObservableObject {
             updated[permission] = permission.status()
         }
         statuses = updated
+        launchAtLogin = LoginItem.state
     }
 
     func grant(_ permission: Permission) {
@@ -123,6 +129,24 @@ final class PermissionWizardModel: ObservableObject {
             await permission.request()
             pending = nil
             refresh()
+        }
+    }
+
+    /// Registers the login item. `requiresApproval` is a normal outcome: macOS
+    /// waits for the user in System Settings, so send them there.
+    func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            let state = try LoginItem.setEnabled(enabled)
+            launchAtLogin = state
+            if state == .requiresApproval {
+                LoginItem.openSettings()
+            }
+        } catch {
+            NSLog(
+                "Heycast: cannot change Launch at Login: %@",
+                error.localizedDescription
+            )
+            launchAtLogin = LoginItem.state
         }
     }
 }

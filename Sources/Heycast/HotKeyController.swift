@@ -9,6 +9,28 @@ import Carbon.HIToolbox
 /// of a launcher shortcut.
 @MainActor
 final class HotKeyController {
+    /// Outcome of registration. `RegisterEventHotKey` failures used to be
+    /// `NSLog`-only, which left a user with a silently dead shortcut; the
+    /// owner reports these in the settings window instead.
+    enum RegistrationStatus: Equatable, Sendable {
+        case registered
+        case handlerFailed(OSStatus)
+        case unavailable(OSStatus)
+
+        var isRegistered: Bool { self == .registered }
+
+        var message: String? {
+            switch self {
+            case .registered:
+                nil
+            case .handlerFailed:
+                "Could not install the keyboard handler."
+            case .unavailable:
+                "Another app already uses this shortcut."
+            }
+        }
+    }
+
     private static let signature: OSType = 0x4845_5943 // 'HEYC'
     private static var nextIdentifier: UInt32 = 1
 
@@ -18,13 +40,28 @@ final class HotKeyController {
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
     private let action: () -> Void
+    private(set) var status: RegistrationStatus = .registered
 
     init(hotKey: HotKey = .default, action: @escaping () -> Void) {
         self.action = action
         identifier = Self.nextIdentifier
         Self.nextIdentifier += 1
         install()
+        guard status == .registered else { return }
         register(hotKey: hotKey)
+    }
+
+    /// Frees the hotkey and its handler before the owner installs a new
+    /// keymap, so a changed shortcut does not leave the old one registered.
+    func unregister() {
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+            self.hotKeyRef = nil
+        }
+        if let handlerRef {
+            RemoveEventHandler(handlerRef)
+            self.handlerRef = nil
+        }
     }
 
     fileprivate func perform() {
@@ -46,6 +83,7 @@ final class HotKeyController {
         )
         if status != noErr {
             NSLog("Heycast: hotkey handler installation failed (\(status))")
+            self.status = .handlerFailed(status)
         }
     }
 
@@ -64,6 +102,7 @@ final class HotKeyController {
                 "Heycast: %@ is unavailable, another app or system shortcut holds it (\(status))",
                 hotKey.displayString
             )
+            self.status = .unavailable(status)
         }
     }
 }
