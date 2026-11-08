@@ -2,7 +2,7 @@
 
 ## X.X.X - YYYY-MM-DD
 - Changed: Launch at Login is toggled only in the Settings window, not the menu-bar menu.
-- Changed: Edit Config moved from the menu-bar menu into the Settings window's Config section.
+- Changed: Edit Config and Reveal moved into the Settings footer, dropping the full-width Config section.
 - Changed: The Settings snippets hint is now a link to the snippet format docs on GitHub.
 
 ## 0.2.2 - 2026-11-06

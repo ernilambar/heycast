@@ -18,7 +18,6 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     generalSection
                     snippetsSection
-                    configSection
                     shortcutSection
                 }
                 .padding(.horizontal, 22)
@@ -47,7 +46,7 @@ struct SettingsView: View {
     }
 
     private var footer: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             if let errorMessage = model.errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                     .font(.system(size: 11))
@@ -59,10 +58,17 @@ struct SettingsView: View {
                     .foregroundStyle(.tertiary)
             }
 
-            Spacer()
+            Spacer(minLength: 12)
+
+            Button("Reveal") { model.revealConfigFile() }
+                .buttonStyle(.link)
+                .font(.system(size: 11))
+            Button("Edit Config…") { model.editConfig() }
+                .buttonStyle(.link)
+                .font(.system(size: 11))
         }
         .padding(.horizontal, 22)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Shortcuts
@@ -226,39 +232,6 @@ struct SettingsView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color(nsColor: .separatorColor))
-            )
-        }
-    }
-
-    // MARK: - Config
-
-    private var configSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Config")
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Edit config.json directly.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 12) {
-                    Spacer(minLength: 0)
-
-                    Button("Reveal") { model.revealConfigFile() }
-                        .font(.system(size: 12))
-                    Button("Edit Config…") { model.editConfig() }
-                        .font(.system(size: 12))
-                }
-            }
-            .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color(nsColor: .controlBackgroundColor))
