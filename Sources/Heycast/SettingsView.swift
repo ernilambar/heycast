@@ -6,6 +6,8 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var model: SettingsModel
 
+    private static let snippetsDocs = URL(string: "https://github.com/ernilambar/heycast/blob/main/docs/snippets.md")!
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
@@ -189,9 +191,8 @@ struct SettingsView: View {
                     .strokeBorder(Color(nsColor: .separatorColor))
             )
 
-            Text("Snippets are Markdown files in this folder. See docs/snippets.md in the project for the format.")
+            Link("Snippets format guide", destination: Self.snippetsDocs)
                 .font(.system(size: 11))
-                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -243,7 +244,7 @@ struct SettingsView: View {
             sectionTitle("Config")
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Edit config.json directly for keys that have no UI. Changes apply immediately.")
+                Text("Edit config.json directly.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
