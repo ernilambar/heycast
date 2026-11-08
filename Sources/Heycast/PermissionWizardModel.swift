@@ -22,7 +22,6 @@ final class PermissionWizardModel: ObservableObject {
     @Published private(set) var statuses: [Permission: PermissionStatus] = [:]
     @Published private(set) var step: Step = .permission(.accessibility)
     @Published private(set) var pending: Permission?
-    @Published private(set) var launchAtLogin: LoginItem.State = .disabled
 
     private var steps: [Step] = []
     private var activationObserver: Any?
@@ -114,7 +113,6 @@ final class PermissionWizardModel: ObservableObject {
             updated[permission] = permission.status()
         }
         statuses = updated
-        launchAtLogin = LoginItem.state
     }
 
     func grant(_ permission: Permission) {
@@ -129,24 +127,6 @@ final class PermissionWizardModel: ObservableObject {
             await permission.request()
             pending = nil
             refresh()
-        }
-    }
-
-    /// Registers the login item. `requiresApproval` is a normal outcome: macOS
-    /// waits for the user in System Settings, so send them there.
-    func setLaunchAtLogin(_ enabled: Bool) {
-        do {
-            let state = try LoginItem.setEnabled(enabled)
-            launchAtLogin = state
-            if state == .requiresApproval {
-                LoginItem.openSettings()
-            }
-        } catch {
-            NSLog(
-                "Heycast: cannot change Launch at Login: %@",
-                error.localizedDescription
-            )
-            launchAtLogin = LoginItem.state
         }
     }
 }

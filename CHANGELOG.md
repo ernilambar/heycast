@@ -1,5 +1,8 @@
 # Changelog
 
+## X.X.X - YYYY-MM-DD
+- Changed: Launch at Login is toggled only in Settings, not in the permission wizard summary.
+
 ## 0.2.3 - 2026-11-08
 - Added: Use Default in Settings clears a custom snippets folder and returns to the default.
 - Changed: Launch at Login is toggled only in the Settings window, not the menu-bar menu.

@@ -280,28 +280,6 @@ private struct PermissionSummaryView: View {
                     .strokeBorder(Color(nsColor: .separatorColor))
             )
 
-            VStack(alignment: .leading, spacing: 6) {
-                Toggle(
-                    "Launch at Login",
-                    isOn: Binding(
-                        get: { model.launchAtLogin.isOn },
-                        set: { model.setLaunchAtLogin($0) }
-                    )
-                )
-                .toggleStyle(.switch)
-                .font(.system(size: 13))
-
-                Text(LoginItem.summary)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-
-                if model.launchAtLogin == .requiresApproval {
-                    Button("Open Login Items") { LoginItem.openSettings() }
-                        .buttonStyle(.link)
-                        .font(.system(size: 11))
-                }
-            }
-
             Spacer(minLength: 0)
         }
     }
