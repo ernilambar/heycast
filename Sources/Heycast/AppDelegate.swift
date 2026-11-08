@@ -332,16 +332,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyEquivalent: ","
         ).target = self
 
-        let loginItem = menu.addItem(
-            withTitle: LoginItem.state == .requiresApproval
-                ? "Launch at Login (Needs Approval)"
-                : "Launch at Login",
-            action: #selector(toggleLaunchAtLogin),
-            keyEquivalent: ""
-        )
-        loginItem.state = LoginItem.state.isOn ? .on : .off
-        loginItem.target = self
-
         menu.addItem(
             withTitle: "Permissions…",
             action: #selector(openPermissions),
@@ -399,22 +389,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let action = KeymapAction(rawValue: raw)
         else { return }
         perform(action, toggling: false)
-    }
-
-    /// Registers or removes the login item. An approval requirement is not an
-    /// error: macOS waits in System Settings, so open that pane.
-    @objc private func toggleLaunchAtLogin() {
-        do {
-            let state = try LoginItem.setEnabled(!LoginItem.state.isOn)
-            if state == .requiresApproval {
-                LoginItem.openSettings()
-            }
-        } catch {
-            NSLog(
-                "Heycast: cannot change Launch at Login: %@",
-                error.localizedDescription
-            )
-        }
     }
 
     @objc private func openSettings() {

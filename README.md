@@ -8,100 +8,44 @@ account, no telemetry.
 
 ## What it does
 
-- **Launch apps.** Press `⌥Space`, type a few letters, hit `↩`. The palette
-  reads `/Applications`, `/System/Applications` and `~/Applications`, and
-  rescans every time it opens, so an app installed a minute ago is there.
-- **Paste snippets.** `⌥⇧Space` searches snippets only. Snippets are Markdown
-  files with a keyword; type the keyword in any app to expand it in place, or
-  pick it from the palette. `{date}`, `{time}`, `{clipboard}` and `{uuid}`
-  fill in at paste time, and your previous clipboard comes back afterwards.
-- **Arrange windows.** `⌃⌥` plus an arrow snaps the focused window to that
-  half, `⌃⌥↩` maximizes and `⌃⌥C` centers it.
-- **Stay out of the way.** Menu bar only: no Dock icon, no main window, no
-  queue of notifications.
+- **Launch apps.** `⌥Space`, a few letters, `↩`. Reads `/Applications`,
+  `/System/Applications` and `~/Applications` and rescans on every open.
+- **Paste snippets.** `⌥⇧Space` filters snippets only. Type a keyword in any
+  app to expand it in place, or pick it from the palette.
+- **Arrange windows.** `⌃⌥` plus an arrow snaps a half, `⌃⌥↩` maximizes,
+  `⌃⌥C` centers.
 
-## Privacy
+## Install
 
-**No telemetry.** Heycast itself makes no network calls: there is no
-analytics, no crash reporting, no install ID and no account. Settings,
-snippets and usage history are plain files in
-`~/Library/Application Support/net.nilambar.heycast/`. Script snippets run
-only the code you wrote, including any network access that code contains.
-
-## Install (30 seconds)
-
-Requires macOS 14 or later on Apple silicon, and Homebrew 7 or later.
+Requires macOS 14+ on Apple silicon and Homebrew 7+.
 
 ```sh
 brew trust ernilambar/tap
 brew install --cask ernilambar/tap/heycast
 ```
 
-Both commands are required. Homebrew 7 refuses an untrusted tap, so the
-one-line install fails on a fresh machine. The cask removes the download
-quarantine flag; the app is not notarized and `spctl` rejects it by design, so
-the tap is the only supported install. There is no zip download.
-
-Upgrade with `brew upgrade --cask heycast`. Remove the app and its files with
-`brew uninstall --zap --cask heycast`.
+Both commands are required: the app is not notarized, and the tap is the only
+supported install. Upgrade with `brew upgrade --cask heycast`; remove
+everything with `brew uninstall --zap --cask heycast`.
 
 ## Use
 
-- `⌥Space` toggles the palette from any app.
-- `⌥⇧Space` opens the palette with snippets only.
-- `⌃⌥` plus an arrow fills that half of the screen, `⌃⌥↩` maximizes and
-  `⌃⌥C` centers the focused window. All shortcuts are configurable; see
-  [docs/keymaps.md](docs/keymaps.md).
-- Click the menu-bar item to toggle the palette.
-- Right-click the menu-bar item for Settings, "Launch at Login",
+- Click the menu-bar item to toggle the palette; right-click for Settings,
   "Permissions…" and the Window submenu.
-- `↑`/`↓` moves the selection, `↩` launches the selected app, pastes the
-  selected snippet, or runs a command; clicking a row does the same. `esc` or
-  focusing another app closes the palette.
-- On a selected row, `⌘↩` reveals the file in Finder, `⌥⌘C` copies its path and
-  `⌥⌘B` copies an app's bundle identifier. The footer shows what applies.
-- Type `Sleep`, `Open Permissions` or `Open Config` to run a built-in command
-  from the palette. Commands are matched by name; no prefix is needed.
-- Typing a snippet keyword in any app expands it in place; this needs
-  Accessibility.
-
-## Settings
-
-Settings edits `config.json` for you: record a shortcut, choose the snippets
-folder, and turn Launch at Login on or off. Changes save atomically and apply
-immediately — the new shortcut works and the new snippets folder is read
-without relaunching. "Edit Config…" in the Config section opens the same file
-for keys that have no UI.
-
-All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
-
-```json
-{
-  "keymaps": {
-    "palette": "alt+space",
-    "snippets": "alt+shift+space"
-  },
-  "snippetsDirectory": "~/Documents/heycast-snippets"
-}
-```
-
-- `keymaps`: global shortcuts. An empty string disables an action. See
-  [docs/keymaps.md](docs/keymaps.md).
-- `snippetsDirectory`: snippets folder. See
-  [docs/snippets.md](docs/snippets.md#location).
-
-## Search
-
-Type to filter apps in `/Applications`, `/System/Applications` and
-`~/Applications`, plus snippets. Frequently and recently launched apps rank
-higher, and the catalog is rescanned on every palette open. Details:
-[docs/search.md](docs/search.md).
+- `↑`/`↓` moves, `↩` opens the selected app, pastes the snippet or runs the
+  command, `esc` closes. On a row, `⌘↩` reveals the file, `⌥⌘C` copies its
+  path, `⌥⌘B` copies an app's bundle identifier.
+- Type `Sleep`, `Open Permissions` or `Open Config` to run a built-in command.
+- All shortcuts are configurable; see [docs/keymaps.md](docs/keymaps.md).
+  Search ranks frequent and recent apps higher; see [docs/search.md](docs/search.md).
 
 ## Snippets
 
-A snippet is a Markdown file in the snippets folder: a `keyword` in the front
-matter, then the text to paste. Set `type: script` or `script: <path>` to paste
-a script's output instead. Full reference: [docs/snippets.md](docs/snippets.md).
+A snippet is a Markdown file with a `keyword` in the front matter and the text
+to paste below. `{date}`, `{time}`, `{clipboard}` and `{uuid}` fill in at paste
+time; the previous clipboard is restored afterwards. Use `type: script` or
+`script: <path>` to paste a script's output instead. Full reference:
+[docs/snippets.md](docs/snippets.md).
 
 ```markdown
 ---
@@ -113,15 +57,27 @@ Best regards,
 Nilambar Sharma
 ```
 
+## Settings
+
+Settings records shortcuts, picks the snippets folder and turns Launch at Login
+on or off. Changes apply immediately. "Edit Config…" opens `config.json` for
+keys without a UI.
+
+All files live in `~/Library/Application Support/net.nilambar.heycast/`; the
+only config keys so far are `keymaps` (empty string disables an action) and
+`snippetsDirectory`.
+
+## Privacy
+
+No telemetry: Heycast makes no network calls — no analytics, crash reporting,
+install ID or account. Script snippets run only the code you wrote, including
+any network access it contains.
+
 ## Permissions
 
-Heycast asks for one grant: **Accessibility**. It powers snippet pasting and
-expansion (Heycast types on your behalf) and moving or resizing other apps'
-windows. Global hotkeys and app launching need no grant.
-
-Nothing is requested at launch: the setup window opens the first time you use
-a snippet or a window command, and "Permissions…" reopens it at any time.
-Launch at Login is a separate toggle in Settings and the menu-bar item.
+One grant: **Accessibility**, for pasting/expanding snippets and moving other
+windows. It is requested lazily on first snippet or window use, never at
+launch; "Permissions…" reopens the setup window.
 
 ## License
 
