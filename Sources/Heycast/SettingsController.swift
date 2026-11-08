@@ -37,6 +37,12 @@ final class SettingsController: NSObject, NSWindowDelegate {
         model.reload()
     }
 
+    /// Seeds and opens `config.json` for keys without a UI. The palette
+    /// command uses this too, so both entry points share one implementation.
+    func editConfig() {
+        model.editConfig()
+    }
+
     private func makeWindow() -> NSWindow {
         let root = SettingsView(model: model)
         let window = NSWindow(

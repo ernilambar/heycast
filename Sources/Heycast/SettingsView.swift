@@ -14,9 +14,10 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    shortcutSection
-                    snippetsSection
                     generalSection
+                    snippetsSection
+                    configSection
+                    shortcutSection
                 }
                 .padding(.horizontal, 22)
                 .padding(.vertical, 18)
@@ -224,6 +225,39 @@ struct SettingsView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color(nsColor: .separatorColor))
+            )
+        }
+    }
+
+    // MARK: - Config
+
+    private var configSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Config")
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Edit config.json directly for keys that have no UI. Changes apply immediately.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 12) {
+                    Spacer(minLength: 0)
+
+                    Button("Reveal") { model.revealConfigFile() }
+                        .font(.system(size: 12))
+                    Button("Edit Config…") { model.editConfig() }
+                        .font(.system(size: 12))
+                }
+            }
+            .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color(nsColor: .controlBackgroundColor))

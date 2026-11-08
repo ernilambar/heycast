@@ -54,7 +54,7 @@ Upgrade with `brew upgrade --cask heycast`. Remove the app and its files with
   [docs/keymaps.md](docs/keymaps.md).
 - Click the menu-bar item to toggle the palette.
 - Right-click the menu-bar item for Settings, "Launch at Login",
-  "Permissions…", the Window submenu and "Edit Config…".
+  "Permissions…" and the Window submenu.
 - `↑`/`↓` moves the selection, `↩` launches the selected app, pastes the
   selected snippet, or runs a command; clicking a row does the same. `esc` or
   focusing another app closes the palette.
@@ -70,8 +70,8 @@ Upgrade with `brew upgrade --cask heycast`. Remove the app and its files with
 Settings edits `config.json` for you: record a shortcut, choose the snippets
 folder, and turn Launch at Login on or off. Changes save atomically and apply
 immediately — the new shortcut works and the new snippets folder is read
-without relaunching. "Edit Config…" still opens the same file for keys that
-have no UI.
+without relaunching. "Edit Config…" in the Config section opens the same file
+for keys that have no UI.
 
 All app files live in `~/Library/Application Support/net.nilambar.heycast/`.
 

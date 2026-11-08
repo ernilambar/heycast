@@ -1,5 +1,8 @@
 # Changelog
 
+## X.X.X - YYYY-MM-DD
+- Changed: Edit Config moved from the menu-bar menu into the Settings window's Config section.
+
 ## 0.2.2 - 2026-11-06
 - Fixed: Palette snippet search matches by keyword or name instead of only the exact keyword.
 

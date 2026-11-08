@@ -255,7 +255,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .openPermissions:
             permissions.show()
         case .openConfig:
-            editConfig()
+            settings?.editConfig()
         }
     }
 
@@ -347,11 +347,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             action: #selector(openPermissions),
             keyEquivalent: ""
         ).target = self
-        menu.addItem(
-            withTitle: "Edit Config…",
-            action: #selector(editConfig),
-            keyEquivalent: ""
-        ).target = self
         menu.addItem(.separator())
         menu.addItem(
             withTitle: "About Heycast",
@@ -432,24 +427,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openAbout() {
         about.show()
-    }
-
-    /// Seeds a template on first use and hands the file to the default editor.
-    /// Settings writes the same file; "Edit Config…" stays for keys that have
-    /// no UI.
-    @objc private func editConfig() {
-        do {
-            let url = try AppConfig.prepareForEditing()
-            if !NSWorkspace.shared.open(url) {
-                NSWorkspace.shared.activateFileViewerSelecting([url])
-            }
-        } catch {
-            NSLog(
-                "Heycast: cannot prepare config at %@: %@",
-                SupportDirectory.configFile.path,
-                error.localizedDescription
-            )
-            NSWorkspace.shared.activateFileViewerSelecting([SupportDirectory.url])
-        }
     }
 }

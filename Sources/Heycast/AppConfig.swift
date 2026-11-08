@@ -123,8 +123,8 @@ extension AppConfig {
     }
 
     /// Creates the support folder and seeds a template when the file does not
-    /// exist yet, then returns the file to edit. "Edit Config…" uses this; the
-    /// settings window writes through `save` instead.
+    /// exist yet, then returns the file to edit. "Edit Config…" in Settings
+    /// uses this; the settings window writes through `save` otherwise.
     static func prepareForEditing(at url: URL = SupportDirectory.configFile) throws -> URL {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),

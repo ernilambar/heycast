@@ -38,6 +38,32 @@ final class SettingsModel: ObservableObject {
         shortcuts[action] ?? nil
     }
 
+    // MARK: - Config file
+
+    /// Seeds `config.json` on first use and hands it to the default editor.
+    /// The window owns this action; the palette command routes here too.
+    func editConfig() {
+        do {
+            let url = try AppConfig.prepareForEditing(at: configURL)
+            if !NSWorkspace.shared.open(url) {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
+        } catch {
+            NSLog(
+                "Heycast: cannot prepare config at %@: %@",
+                configURL.path,
+                error.localizedDescription
+            )
+            errorMessage = "Could not open config.json: \(error.localizedDescription)"
+            NSWorkspace.shared.activateFileViewerSelecting([configURL.deletingLastPathComponent()])
+        }
+    }
+
+    func revealConfigFile() {
+        _ = try? AppConfig.prepareForEditing(at: configURL)
+        NSWorkspace.shared.activateFileViewerSelecting([configURL])
+    }
+
     /// Reads the file back, so an external edit and the settings window
     /// cannot drift apart.
     func reload() {
