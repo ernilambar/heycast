@@ -1,6 +1,6 @@
 # Changelog
 
-## X.X.X - YYYY-MM-DD
+## 0.2.3 - 2026-11-08
 - Added: Use Default in Settings clears a custom snippets folder and returns to the default.
 - Changed: Launch at Login is toggled only in the Settings window, not the menu-bar menu.
 - Changed: Edit Config and Reveal moved into the Settings footer, dropping the full-width Config section.
