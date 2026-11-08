@@ -51,6 +51,36 @@ import Testing
         #expect(saved.resolvedKeymap()[.snippets] == nil)
     }
 
+    @Test func useDefaultSnippetsDirectoryDropsTheOverride() throws {
+        let (model, directory) = try makeModel()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let configURL = directory.appendingPathComponent("config.json")
+        let custom = directory.appendingPathComponent("snippets", isDirectory: true)
+        try #"{"snippetsDirectory":"\#(custom.path)"}"#
+            .write(to: configURL, atomically: true, encoding: .utf8)
+
+        model.reload()
+        #expect(model.isUsingDefaultSnippetsDirectory == false)
+
+        model.useDefaultSnippetsDirectory()
+
+        let saved = AppConfig.load(from: configURL)
+        #expect(saved.snippetsDirectory == nil)
+        #expect(model.isUsingDefaultSnippetsDirectory)
+    }
+
+    @Test func savingAShortcutDoesNotPinTheDefaultSnippetsFolder() throws {
+        let (model, directory) = try makeModel()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        model.reload()
+        model.setShortcut(HotKey.parse("ctrl+alt+k"), for: .palette)
+
+        let saved = AppConfig.load(from: directory.appendingPathComponent("config.json"))
+        #expect(saved.snippetsDirectory == nil)
+    }
+
     @Test func systemOwnedShortcutIsReportedAsAnIssue() throws {
         let (model, directory) = try makeModel()
         defer { try? FileManager.default.removeItem(at: directory) }

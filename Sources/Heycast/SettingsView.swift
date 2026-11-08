@@ -186,6 +186,10 @@ struct SettingsView: View {
                     .font(.system(size: 12))
                 Button("Choose…") { model.chooseSnippetsDirectory() }
                     .font(.system(size: 12))
+                Button("Use Default") { model.useDefaultSnippetsDirectory() }
+                    .font(.system(size: 12))
+                    .disabled(model.isUsingDefaultSnippetsDirectory)
+                    .help("Clear the custom folder and return to the default snippets folder.")
             }
             .padding(12)
             .background(
@@ -196,6 +200,11 @@ struct SettingsView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color(nsColor: .separatorColor))
             )
+
+            Text("The folder is created automatically; keep it empty to have no snippets.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Link("Snippets format guide", destination: Self.snippetsDocs)
                 .font(.system(size: 11))

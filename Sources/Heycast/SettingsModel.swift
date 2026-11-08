@@ -9,6 +9,10 @@ import Combine
 final class SettingsModel: ObservableObject {
     @Published private(set) var shortcuts: [KeymapAction: HotKey?] = [:]
     @Published private(set) var snippetsPath = ""
+    /// Whether `config.json` leaves the snippets folder at its default. A
+    /// custom path is written only while this is false, so resetting drops the
+    /// key instead of pinning today's default path.
+    @Published private(set) var isUsingDefaultSnippetsDirectory = true
     @Published private(set) var launchAtLogin: LoginItem.State = .disabled
     @Published private(set) var recording: KeymapAction?
     @Published private(set) var issues: [KeymapAction: String] = [:]
@@ -67,13 +71,17 @@ final class SettingsModel: ObservableObject {
     /// Reads the file back, so an external edit and the settings window
     /// cannot drift apart.
     func reload() {
-        let keymap = AppConfig.load(from: configURL).resolvedKeymap()
+        let config = AppConfig.load(from: configURL)
+        let keymap = config.resolvedKeymap()
         var shortcuts: [KeymapAction: HotKey?] = [:]
         for action in KeymapAction.allCases {
             shortcuts[action] = keymap[action]
         }
         self.shortcuts = shortcuts
         snippetsPath = Self.displayPath(snippetsDirectory())
+        let configured = config.snippetsDirectory?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        isUsingDefaultSnippetsDirectory = configured?.isEmpty ?? true
         launchAtLogin = LoginItem.state
         refreshIssues()
     }
@@ -118,6 +126,17 @@ final class SettingsModel: ObservableObject {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         snippetsPath = Self.displayPath(url)
+        isUsingDefaultSnippetsDirectory = false
+        save()
+    }
+
+    /// Clears the `snippetsDirectory` override so the default folder applies
+    /// again. The folder is not deleted: it is created on demand, and an empty
+    /// folder is how the user has no snippets.
+    func useDefaultSnippetsDirectory() {
+        guard !isUsingDefaultSnippetsDirectory else { return }
+        isUsingDefaultSnippetsDirectory = true
+        snippetsPath = Self.displayPath(SupportDirectory.defaultSnippets)
         save()
     }
 
@@ -169,7 +188,7 @@ final class SettingsModel: ObservableObject {
         do {
             try AppConfig.save(
                 keymaps: keymaps,
-                snippetsDirectory: snippetsPath,
+                snippetsDirectory: isUsingDefaultSnippetsDirectory ? nil : snippetsPath,
                 at: configURL
             )
             errorMessage = nil

@@ -60,8 +60,9 @@ Nilambar Sharma
 ## Settings
 
 Settings records shortcuts, picks the snippets folder and turns Launch at Login
-on or off. Changes apply immediately. "Edit Config…" opens `config.json` for
-keys without a UI.
+on or off. Changes apply immediately. "Use Default" clears a custom snippets
+folder; the folder itself is created automatically, so keep it empty for no
+snippets. "Edit Config…" opens `config.json` for keys without a UI.
 
 All files live in `~/Library/Application Support/net.nilambar.heycast/`; the
 only config keys so far are `keymaps` (empty string disables an action) and
