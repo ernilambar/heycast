@@ -3,11 +3,26 @@ name: CI
 on:
   push:
     branches: [main]
+    # A docs-only push cannot break the Swift build, and a skipped push saves
+    # the whole macOS runner minute. The release workflow still validates
+    # CHANGELOG for a tag. Resources/ stays in scope: Info.plist is build
+    # input, not documentation.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
   # The signing gate is manual: its secrets sit behind the `release`
   # environment's required reviewer, and it has nothing to check on a code
   # change. Use it before a tag, or whenever the certificate might have moved.
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,14 +30,13 @@ concurrency:
 
 jobs:
   test:
+    # macOS-only (AppKit/SwiftUI) and the most expensive runner GitHub sells,
+    # so this job does only what needs macOS plus the two-second flatlog check.
+    # Node 22 ships with the image; a setup-node step would just add a step.
     runs-on: macos-15
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Show Swift version
-        run: swift --version
       - name: Validate changelog
         run: npx --yes @nilambar/flatlog@2 validate
       - name: Run unit tests
@@ -35,6 +49,7 @@ jobs:
   signing:
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-15
+    timeout-minutes: 30
     environment: release
     steps:
       - uses: actions/checkout@v4

@@ -404,9 +404,19 @@ with the Swift 6 Command Line Tools, but SwiftPM only injects its macro plugin
 in an Xcode toolchain layout, so `make test` passes the plugin path itself
 when Xcode is absent.
 
-CI (`.github/workflows/ci.yml`) runs the suite on `macos-15` for pushes to
-`main` and every pull request. `.github/workflows/release.yml` runs it again on
-a version tag and publishes the release.
+CI (`.github/workflows/ci.yml`) runs the flatlog changelog check and `make
+test` on `macos-15` for pushes to `main` and for pull requests, but skips
+changes that touch only Markdown, `docs/` or `LICENSE`: a skipped push costs
+zero runner minutes. Jobs are capped with `timeout-minutes` and superseded runs
+are cancelled. `.github/workflows/release.yml` runs the suite again on a
+version tag and publishes the release.
+
+Standard GitHub-hosted runners are free for public repositories, so none of
+this uses the account's included compute while the repository is public. If it
+goes private again, those same runs draw on the monthly allowance at the macOS
+rate, and every push to `main` then costs a full runner minute — keep the
+`make test` habit local.
+
 
 ## Next
 

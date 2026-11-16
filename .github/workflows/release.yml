@@ -7,9 +7,16 @@ on:
 permissions:
   contents: write
 
+# A re-pushed tag must not leave two release runs racing to publish. The newer
+# tag wins; the superseded run is cancelled instead of being billed to the end.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: macos-15
+    timeout-minutes: 45
     # The signing secrets live on this environment so publishing a tag waits for
     # a human. A release is irreversible for users: `brew upgrade` replaces the
     # app, and a rotated identity silently revokes their Accessibility grant.
@@ -17,9 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+      # Node 22 ships with the runner image; npx below needs no setup step.
 
       # Resources/Info.plist is the only place the version lives, so a tag that
       # disagrees with it would publish a mislabelled build.
