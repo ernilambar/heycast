@@ -26,8 +26,9 @@ bundle-release:
 	./scripts/bundle.sh --release
 
 # Unit tests for the pure logic: search ranking, usage scoring, config paths.
+# `make test FILTER=KeymapTests` runs one suite; --filter takes a regex.
 test:
-	swift test $(TEST_PLUGIN_FLAGS)
+	swift test $(TEST_PLUGIN_FLAGS) $(if $(FILTER),--filter '$(FILTER)')
 
 stop:
 	-@killall $(APP_NAME) 2>/dev/null
