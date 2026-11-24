@@ -1,6 +1,6 @@
 # Changelog
 
-## X.X.X - YYYY-MM-DD
+## 0.2.6 - 2026-11-24
 - Changed: macOS 15 or later is now required.
 - Fixed: Settings no longer flags shortcuts disabled or rebound in macOS System Settings.
 
