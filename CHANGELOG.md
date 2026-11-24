@@ -1,5 +1,7 @@
 # Changelog
 
+## X.X.X - YYYY-MM-DD
+
 ## 0.2.5 - 2026-11-24
 - Added: A brief on-screen message explains a failed app launch, snippet script, paste or window command.
 - Changed: Both left and right clicks on the menu-bar item open the menu.
