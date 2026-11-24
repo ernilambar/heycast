@@ -55,12 +55,22 @@ final class SnippetExpander {
     private var directorySource: DispatchSourceFileSystemObject?
     private var isExpanding = false
     private var loggedMissingPermission = false
+    private var activationObserver: NSObjectProtocol?
 
     init(directory: URL, isEnabled: @escaping () -> Bool) {
         self.directory = directory
         self.isEnabled = isEnabled
         reload()
         watchDirectory()
+        // Keystrokes typed in one app must not combine with ones typed in
+        // the next: half a keyword plus the rest elsewhere is not a match.
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.resetBuffer() }
+        }
     }
 
     func startIfNeeded() {
@@ -82,6 +92,8 @@ final class SnippetExpander {
 
         let mask =
             CGEventMask(1 << CGEventType.keyDown.rawValue) |
+            CGEventMask(1 << CGEventType.leftMouseDown.rawValue) |
+            CGEventMask(1 << CGEventType.rightMouseDown.rawValue) |
             CGEventMask(1 << CGEventType.tapDisabledByTimeout.rawValue) |
             CGEventMask(1 << CGEventType.tapDisabledByUserInput.rawValue)
 
@@ -189,14 +201,21 @@ final class SnippetExpander {
         guard let snippet = index.expansion(for: buffer) else { return }
 
         let keywordLength = snippet.keyword.count
+        let target = NSWorkspace.shared.frontmostApplication?.processIdentifier
         buffer.removeAll()
         isExpanding = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.expand(snippet, keywordLength: keywordLength)
+            self?.expand(snippet, keywordLength: keywordLength, target: target)
         }
     }
 
-    private func expand(_ snippet: Snippet, keywordLength: Int) {
+    /// A click can move focus to another field without any key the buffer
+    /// sees, so it starts the match over.
+    fileprivate func resetBuffer() {
+        buffer.removeAll()
+    }
+
+    private func expand(_ snippet: Snippet, keywordLength: Int, target: pid_t?) {
         guard AXIsProcessTrusted() else {
             NSLog("Heycast: snippet expansion needs Accessibility")
             isExpanding = false
@@ -211,11 +230,20 @@ final class SnippetExpander {
                 self?.isExpanding = false
                 return
             }
-            self?.paste(text, replacingKeywordOfLength: keywordLength)
+            self?.paste(text, replacingKeywordOfLength: keywordLength, target: target)
         }
     }
 
-    private func paste(_ text: String, replacingKeywordOfLength keywordLength: Int) {
+    /// A script can run for seconds; if the user switched apps meanwhile,
+    /// backspaces and ⌘V would land in the wrong place, so nothing is sent.
+    private func paste(_ text: String, replacingKeywordOfLength keywordLength: Int, target: pid_t?) {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target else {
+            NSLog("Heycast: snippet skipped; the frontmost app changed before it was ready")
+            NSSound.beep()
+            isExpanding = false
+            return
+        }
+
         let pasteboard = NSPasteboard.general
         let previousClipboard = ClipboardSnapshot.capture(from: pasteboard)
         pasteboard.clearContents()
@@ -270,6 +298,8 @@ private func snippetEventTapCallback(
         switch type {
         case .keyDown:
             expander.handle(event)
+        case .leftMouseDown, .rightMouseDown:
+            expander.resetBuffer()
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
             expander.reenableTap()
         default:

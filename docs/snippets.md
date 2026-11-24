@@ -147,6 +147,7 @@ run from Terminal.
 | Non-zero exit | Nothing pasted, beep, stderr logged |
 | Empty output or non-UTF-8 | Nothing pasted, beep |
 | Runs longer than 5 s | Killed, nothing pasted, beep |
+| You switch apps before it finishes | Nothing pasted, keyword kept, beep |
 | Inline trigger fails | Typed keyword stays in place |
 
 - Runs in the background, so the keyboard never stalls.
