@@ -300,11 +300,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func statusItemClicked() {
-        if NSApp.currentEvent?.type == .rightMouseUp {
-            showMenu()
-        } else {
-            perform(.palette, toggling: true)
-        }
+        showMenu()
     }
 
     private func showMenu() {
@@ -351,7 +347,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         statusItem?.menu = menu
         statusItem?.button?.performClick(nil)
-        // Detach again so left clicks keep toggling the palette.
+        // Detach again so the next click opens a fresh menu.
         statusItem?.menu = nil
     }
 

@@ -30,8 +30,8 @@ everything with `brew uninstall --zap --cask heycast`.
 
 ## Use
 
-- Click the menu-bar item to toggle the palette; right-click for Settings,
-  "Permissions…" and the Window submenu.
+- Click the menu-bar item, left or right, for Settings, "Permissions…" and the
+  Window submenu.
 - `↑`/`↓` moves, `↩` opens the selected app, pastes the snippet or runs the
   command, `esc` closes. On a row, `⌘↩` reveals the file, `⌥⌘C` copies its
   path, `⌥⌘B` copies an app's bundle identifier.
