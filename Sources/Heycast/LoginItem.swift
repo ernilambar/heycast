@@ -15,7 +15,9 @@ enum LoginItem {
         case disabled
         case unavailable
 
-        var isOn: Bool { self == .enabled }
+        /// Awaiting approval counts as on: the user asked for it, and a switch
+        /// that snaps back reads as a failure.
+        var isOn: Bool { self == .enabled || self == .requiresApproval }
     }
 
     static var state: State {

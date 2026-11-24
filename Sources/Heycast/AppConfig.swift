@@ -21,14 +21,32 @@ extension AppConfig {
     /// Resolves every known action, rejecting malformed and duplicate
     /// shortcuts so one command cannot silently replace another.
     func resolvedKeymap() -> Keymap {
+        resolve().keymap
+    }
+
+    /// Why a configured shortcut is not the one in effect, keyed by action,
+    /// so Settings can explain a value it would otherwise show as chosen.
+    func keymapIssues() -> [KeymapAction: String] {
+        resolve().issues
+    }
+
+    /// Keys under `keymaps` that name no action, sorted.
+    var unknownKeymapActions: [String] {
+        (keymaps ?? [:]).keys.filter { KeymapAction(rawValue: $0) == nil }.sorted()
+    }
+
+    private func resolve() -> (keymap: Keymap, issues: [KeymapAction: String]) {
         var shortcuts: [KeymapAction: HotKey] = [:]
         var owners: [HotKey: KeymapAction] = [:]
+        var issues: [KeymapAction: String] = [:]
 
         for action in KeymapAction.allCases {
-            guard let hotKey = resolvedShortcut(
+            let (resolved, issue) = resolvedShortcut(
                 for: action,
                 configured: keymaps?[action.rawValue]
-            ) else { continue }
+            )
+            issues[action] = issue
+            guard let hotKey = resolved else { continue }
 
             if let owner = owners[hotKey] {
                 NSLog(
@@ -38,6 +56,7 @@ extension AppConfig {
                     hotKey.displayString,
                     action.rawValue
                 )
+                issues[action] = "\(hotKey.displayString) is already used by \(owner.settingsTitle); disabled."
                 continue
             }
 
@@ -45,21 +64,21 @@ extension AppConfig {
             shortcuts[action] = hotKey
         }
 
-        for key in (keymaps ?? [:]).keys where KeymapAction(rawValue: key) == nil {
+        for key in unknownKeymapActions {
             NSLog("Heycast: unknown keymap action \"%@\" in config.json", key)
         }
 
-        return Keymap(shortcuts: shortcuts)
+        return (Keymap(shortcuts: shortcuts), issues)
     }
 
     private func resolvedShortcut(
         for action: KeymapAction,
         configured: String?
-    ) -> HotKey? {
-        guard let configured else { return action.defaultShortcut }
+    ) -> (HotKey?, String?) {
+        guard let configured else { return (action.defaultShortcut, nil) }
 
         let value = configured.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else { return nil }
+        guard !value.isEmpty else { return (nil, nil) }
 
         guard let parsed = HotKey.parse(value) else {
             let fallback = action.defaultShortcut?.displayString ?? "disabled"
@@ -69,22 +88,36 @@ extension AppConfig {
                 value,
                 fallback
             )
-            return action.defaultShortcut
+            return (action.defaultShortcut, "“\(value)” in config.json is not a valid shortcut; using \(fallback).")
         }
-        return parsed
+        return (parsed, nil)
     }
 
     static func load(from url: URL = SupportDirectory.configFile) -> AppConfig {
-        guard FileManager.default.fileExists(atPath: url.path) else { return AppConfig() }
+        (try? loadResult(from: url).get()) ?? AppConfig()
+    }
+
+    /// Like `load`, but reports an unreadable file instead of hiding it
+    /// behind defaults, so callers can keep the last good config.
+    static func loadResult(from url: URL = SupportDirectory.configFile) -> Result<AppConfig, Error> {
+        guard FileManager.default.fileExists(atPath: url.path) else { return .success(AppConfig()) }
         do {
-            return try JSONDecoder().decode(AppConfig.self, from: Data(contentsOf: url))
+            return .success(try JSONDecoder().decode(AppConfig.self, from: Data(contentsOf: url)))
         } catch {
             NSLog(
                 "Heycast: ignoring unreadable config at %@: %@",
                 url.path,
                 error.localizedDescription
             )
-            return AppConfig()
+            return .failure(error)
+        }
+    }
+
+    enum SaveError: Error, LocalizedError {
+        case invalidExistingFile
+
+        var errorDescription: String? {
+            "config.json is not valid JSON; fix or remove it first"
         }
     }
 
@@ -138,7 +171,9 @@ extension AppConfig {
 
     /// Writes the settings the window owns, leaving every other key in the
     /// file alone. Atomic, so a failed write leaves the previous config in
-    /// place and the running app never sees a half-written file.
+    /// place and the running app never sees a half-written file. An existing
+    /// file that is not a JSON object is never overwritten: starting from
+    /// `{}` would drop every key the user wrote.
     static func save(
         keymaps: [String: String],
         snippetsDirectory: String?,
@@ -150,9 +185,16 @@ extension AppConfig {
         )
 
         var object: [String: Any] = [:]
-        if let data = try? Data(contentsOf: url),
-           let existing = try? JSONSerialization.jsonObject(with: data),
-           let dictionary = existing as? [String: Any] {
+        if FileManager.default.fileExists(atPath: url.path) {
+            let data = try Data(contentsOf: url)
+            // Valid JSON can still fail to decode (`"keymaps": 5`); the app
+            // then runs on defaults, so saving would write them over the
+            // user's values. Both must succeed before the file is reused.
+            guard (try? JSONDecoder().decode(AppConfig.self, from: data)) != nil,
+                  let dictionary = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            else {
+                throw SaveError.invalidExistingFile
+            }
             object = dictionary
         }
 

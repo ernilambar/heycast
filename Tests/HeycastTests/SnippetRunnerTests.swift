@@ -210,3 +210,40 @@ private func inline(_ body: String) -> Snippet {
         try SnippetRunner.checkOwnership(of: URL(fileURLWithPath: "/bin/sh"))
     }
 }
+
+@Suite struct LoginShellPathTests {
+    /// A stand-in for `$SHELL` that ignores `-l -c …` and runs `body`.
+    private func fakeShell(_ body: String) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("heycast-shell-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let shell = directory.appendingPathComponent("shell")
+        try "#!/bin/sh\n\(body)\n".write(to: shell, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: shell.path)
+        return shell
+    }
+
+    @Test func readsThePathTheShellPrints() throws {
+        let shell = try fakeShell("printf /fake/bin")
+        defer { try? FileManager.default.removeItem(at: shell.deletingLastPathComponent()) }
+        #expect(SnippetRunner.loginShellPath(shell: shell.path) == "/fake/bin")
+    }
+
+    @Test func hangingShellFallsBackWithinTheBound() throws {
+        let shell = try fakeShell("sleep 10")
+        defer { try? FileManager.default.removeItem(at: shell.deletingLastPathComponent()) }
+
+        let start = Date()
+        #expect(SnippetRunner.loginShellPath(shell: shell.path, timeout: 0.3) == nil)
+        #expect(Date().timeIntervalSince(start) < 3)
+    }
+
+    @Test func backgroundChildHoldingStdoutDoesNotBlock() throws {
+        let shell = try fakeShell("sleep 10 &\nprintf /fake/bin")
+        defer { try? FileManager.default.removeItem(at: shell.deletingLastPathComponent()) }
+
+        let start = Date()
+        #expect(SnippetRunner.loginShellPath(shell: shell.path, timeout: 2) == "/fake/bin")
+        #expect(Date().timeIntervalSince(start) < 2)
+    }
+}

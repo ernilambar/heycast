@@ -40,11 +40,12 @@ jobs:
       # CHANGELOG.md is the only release-notes source, so a tag without a
       # valid entry would publish a release nobody can read. flatlog also
       # rejects an unreleased block, so the placeholder must be promoted with
-      # `flatlog release` before tagging.
+      # `flatlog release` before tagging. Pinned exactly: this job holds the
+      # signing secrets, so a new upstream publish must not run here unreviewed.
       - name: Validate CHANGELOG for the tag
         run: |
           tag_version="${GITHUB_REF_NAME#v}"
-          npx --yes @nilambar/flatlog@2 validate "$tag_version"
+          npx --yes @nilambar/flatlog@2.0.1 validate "$tag_version"
 
       - name: Run unit tests
         run: make test

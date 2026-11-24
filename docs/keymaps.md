@@ -38,7 +38,7 @@ name; each value is a shortcut string.
 Window commands act on the focused window and need Accessibility. All of them
 are also in the menu-bar item's "Window" submenu; thirds and undo ship unbound
 and are used from that submenu. Each action applies one fixed layout — there is
-no cycling. A full-screen window is left untouched and the attempt is logged,
+no cycling. A full-screen window is left untouched with a brief message,
 so Heycast never forces a Space transition. Undo history is in memory only and
 holds one step per window.
 
@@ -74,9 +74,13 @@ Join modifiers and one key with `+`: `cmd+shift+k`, `alt+space`, `ctrl+f1`.
 
 - A missing action uses its default. Quarter commands have none.
 - `""` disables an action.
-- Unknown action names are logged and ignored.
-- An invalid shortcut is logged and falls back to the action's default.
-- A duplicate shortcut is logged; the first action wins, in table order.
+- Unknown action names are ignored and listed in the Settings footer.
+- An invalid shortcut falls back to the action's default; its row in Settings
+  says so.
+- A duplicate shortcut keeps the first action, in table order; the other row
+  shows it disabled and why. Settings refuses to record a duplicate.
+- A `config.json` that does not parse is never overwritten by Settings, and
+  the shortcuts already running stay in place until it is fixed.
 - Registration fails when another app or a system shortcut owns the
   combination. The failure is shown in Settings, not only in the log.
 - Changes apply immediately: the settings window writes `config.json` and the

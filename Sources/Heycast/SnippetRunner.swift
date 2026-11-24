@@ -39,6 +39,8 @@ enum SnippetRunner {
             return try await resolve(snippet)
         } catch {
             NSLog("Heycast: snippet “%@” script %@", snippet.keyword, String(describing: error))
+            let message = "Snippet “\(snippet.keyword)” \(error)"
+            await MainActor.run { Toast.show(message) }
             return nil
         }
     }
@@ -190,15 +192,29 @@ enum SnippetRunner {
         return environment
     }()
 
-    private static func loginShellPath() -> String? {
-        let shell = ProcessInfo.processInfo.environment["SHELL"].flatMap { $0.isEmpty ? nil : $0 } ?? "/bin/zsh"
+    /// Bounded like a script: a profile that hangs, or a background job that
+    /// keeps stdout open, must not wedge every later snippet. Output goes to
+    /// a file for the same reason `run` uses one.
+    static func loginShellPath(
+        shell: String = ProcessInfo.processInfo.environment["SHELL"].flatMap { $0.isEmpty ? nil : $0 } ?? "/bin/zsh",
+        timeout: TimeInterval = 2
+    ) -> String? {
+        guard let directory = try? makeWorkDirectory() else { return nil }
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let outputURL = directory.appendingPathComponent("stdout")
+        FileManager.default.createFile(atPath: outputURL.path, contents: nil)
+        guard let output = try? FileHandle(forWritingTo: outputURL) else { return nil }
+        defer { try? output.close() }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: shell)
         process.arguments = ["-l", "-c", "printf %s \"$PATH\""]
         process.standardInput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
-        let output = Pipe()
         process.standardOutput = output
+
+        let exited = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in exited.signal() }
 
         do {
             try process.run()
@@ -206,10 +222,17 @@ enum SnippetRunner {
             NSLog("Heycast: cannot read PATH from %@: %@", shell, error.localizedDescription)
             return nil
         }
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+        if exited.wait(timeout: .now() + timeout) == .timedOut {
+            process.terminate()
+            if exited.wait(timeout: .now() + 1) == .timedOut {
+                kill(process.processIdentifier, SIGKILL)
+            }
+            NSLog("Heycast: %@ took too long to report PATH; using the default", shell)
+            return nil
+        }
 
         guard process.terminationStatus == 0,
+              let data = try? Data(contentsOf: outputURL),
               let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !path.isEmpty
         else {

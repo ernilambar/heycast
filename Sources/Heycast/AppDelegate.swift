@@ -40,6 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// return so a new Accessibility grant takes effect without a relaunch.
     func applicationDidBecomeActive(_ notification: Notification) {
         snippetExpander?.startIfNeeded()
+        // Returning from System Settings → Login Items must show the new
+        // approval state, not the one from before the user left.
+        settings?.refresh()
     }
 
     private func configureSettings() {
@@ -67,7 +70,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// snippets folder is re-resolved, so a settings change or a hand edit
     /// needs no relaunch. Unchanged values are left alone to avoid churn.
     private func applyConfig() {
-        let config = AppConfig.load()
+        let config: AppConfig
+        switch AppConfig.loadResult() {
+        case .success(let loaded):
+            config = loaded
+        case .failure:
+            // A typo in a hand edit must not re-register the defaults over
+            // the user's shortcuts; keep what is running until it is fixed.
+            guard keymap == nil else {
+                settings?.refresh()
+                return
+            }
+            config = AppConfig()
+        }
         let keymap = config.resolvedKeymap()
         if keymap != self.keymap {
             installKeymap(keymap)
@@ -229,6 +244,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               target.processIdentifier != ProcessInfo.processInfo.processIdentifier
         else {
             NSLog("Heycast: window %@: no app in front", action.rawValue)
+            Toast.show("No window to move.")
             return
         }
 
