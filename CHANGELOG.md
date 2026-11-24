@@ -2,6 +2,7 @@
 
 ## X.X.X - YYYY-MM-DD
 - Changed: macOS 15 or later is now required.
+- Fixed: Settings no longer flags shortcuts disabled or rebound in macOS System Settings.
 
 ## 0.2.5 - 2026-11-24
 - Added: A brief on-screen message explains a failed app launch, snippet script, paste or window command.

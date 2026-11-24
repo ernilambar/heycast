@@ -18,6 +18,7 @@ import Testing
             configURL: directory.appendingPathComponent("config.json"),
             snippetsDirectory: { snippets },
             registrationIssues: { [:] },
+            systemReservations: { SystemShortcuts.reservations(from: nil) },
             onApply: applied
         )
         return (model, directory)

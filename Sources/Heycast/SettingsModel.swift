@@ -24,6 +24,9 @@ final class SettingsModel: ObservableObject {
     private let configURL: URL
     private let snippetsDirectory: () -> URL
     private let registrationIssues: () -> [KeymapAction: String]
+    /// Live macOS reservations by default; tests pin them so results do not
+    /// depend on the machine's System Settings.
+    private let systemReservations: () -> [HotKey: SystemShortcut]
     private let onApply: () -> Void
     private var monitor: Any?
     private var configIssues: [KeymapAction: String] = [:]
@@ -32,11 +35,13 @@ final class SettingsModel: ObservableObject {
         configURL: URL = SupportDirectory.configFile,
         snippetsDirectory: @escaping () -> URL,
         registrationIssues: @escaping () -> [KeymapAction: String],
+        systemReservations: @escaping () -> [HotKey: SystemShortcut] = { SystemShortcuts.reservations() },
         onApply: @escaping () -> Void
     ) {
         self.configURL = configURL
         self.snippetsDirectory = snippetsDirectory
         self.registrationIssues = registrationIssues
+        self.systemReservations = systemReservations
         self.onApply = onApply
     }
 
@@ -232,9 +237,10 @@ final class SettingsModel: ObservableObject {
         for (action, message) in registrationIssues() {
             add(message, for: action)
         }
+        let reserved = systemReservations()
         for action in KeymapAction.allCases {
             guard let hotKey = shortcut(for: action),
-                  let owner = SystemShortcuts.owner(of: hotKey)
+                  let owner = reserved[hotKey]
             else { continue }
             add("\(owner.title) already uses \(hotKey.displayString).", for: action)
         }

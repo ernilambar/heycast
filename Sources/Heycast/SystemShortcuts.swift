@@ -1,3 +1,4 @@
+import Carbon.HIToolbox
 import Foundation
 
 /// Shortcuts macOS owns globally.
@@ -38,41 +39,77 @@ enum SystemShortcut: String, CaseIterable, Sendable {
         }
     }
 
-    /// Config spellings, parsed through `HotKey.parse` so the table cannot
-    /// drift from the parser.
-    var bindings: [String] {
+    /// Default config spellings, parsed through `HotKey.parse` so the table
+    /// cannot drift from the parser, each paired with its ID in macOS's
+    /// `AppleSymbolicHotKeys`. A `nil` ID marks a shortcut System Settings
+    /// cannot disable or rebind, so it is always reserved.
+    var bindings: [(id: Int?, binding: String)] {
         switch self {
-        case .spotlight: ["cmd+space"]
-        case .inputSource: ["ctrl+space"]
-        case .emojiAndSymbols: ["ctrl+cmd+space"]
-        case .applicationSwitcher: ["cmd+tab"]
-        case .missionControl: ["ctrl+up"]
-        case .applicationWindows: ["ctrl+down"]
-        case .moveLeftSpace: ["ctrl+left"]
-        case .moveRightSpace: ["ctrl+right"]
-        case .screenshot: ["shift+cmd+3", "shift+cmd+4", "shift+cmd+5"]
-        case .lockScreen: ["ctrl+cmd+q"]
-        case .forceQuit: ["alt+cmd+escape"]
-        case .finderSearch: ["alt+cmd+space"]
+        case .spotlight: [(64, "cmd+space")]
+        case .inputSource: [(60, "ctrl+space")]
+        case .emojiAndSymbols: [(nil, "ctrl+cmd+space")]
+        case .applicationSwitcher: [(nil, "cmd+tab")]
+        case .missionControl: [(32, "ctrl+up")]
+        case .applicationWindows: [(33, "ctrl+down")]
+        case .moveLeftSpace: [(79, "ctrl+left")]
+        case .moveRightSpace: [(81, "ctrl+right")]
+        case .screenshot: [(28, "shift+cmd+3"), (30, "shift+cmd+4"), (184, "shift+cmd+5")]
+        case .lockScreen: [(nil, "ctrl+cmd+q")]
+        case .forceQuit: [(nil, "alt+cmd+escape")]
+        case .finderSearch: [(65, "alt+cmd+space")]
         }
     }
 }
 
 enum SystemShortcuts {
-    /// The system feature that owns `hotKey`, or `nil` when the combination is
-    /// not one of the well-known reserved shortcuts.
-    static func owner(of hotKey: HotKey) -> SystemShortcut? {
-        reservations[hotKey]
-    }
-
-    private static let reservations: [HotKey: SystemShortcut] = {
+    /// Combinations macOS currently reserves, keyed to their owner.
+    ///
+    /// `symbolicHotKeys` is the `AppleSymbolicHotKeys` dictionary from
+    /// `com.apple.symbolichotkeys`. An entry with `enabled = 0` frees its
+    /// combination; an entry with parameters replaces the default binding with
+    /// the user's own. A missing entry keeps the default.
+    static func reservations(
+        from symbolicHotKeys: [String: Any]? = currentSymbolicHotKeys()
+    ) -> [HotKey: SystemShortcut] {
         var reservations: [HotKey: SystemShortcut] = [:]
         for shortcut in SystemShortcut.allCases {
-            for binding in shortcut.bindings {
-                guard let hotKey = HotKey.parse(binding) else { continue }
+            for (id, binding) in shortcut.bindings {
+                let entry = id.flatMap { symbolicHotKeys?[String($0)] as? [String: Any] }
+                if let enabled = entry?["enabled"] as? Bool, !enabled { continue }
+                // A stored binding wins even when it is unrepresentable or
+                // unassigned; only a missing one falls back to the default.
+                let hotKey = entry?["value"] != nil
+                    ? entry.flatMap(customHotKey)
+                    : HotKey.parse(binding)
+                guard let hotKey else { continue }
                 reservations[hotKey] = shortcut
             }
         }
         return reservations
-    }()
+    }
+
+    /// Reads the live macOS setting; a local preferences read, no TCC prompt.
+    static func currentSymbolicHotKeys() -> [String: Any]? {
+        let domain = "com.apple.symbolichotkeys" as CFString
+        CFPreferencesAppSynchronize(domain)
+        return CFPreferencesCopyAppValue("AppleSymbolicHotKeys" as CFString, domain)
+            as? [String: Any]
+    }
+
+    /// `parameters` is `[character, keyCode, modifierFlags]` with AppKit
+    /// modifier masks; arrow keys also carry the function and numeric-pad bits,
+    /// which `HotKey` does not model.
+    private static func customHotKey(_ entry: [String: Any]) -> HotKey? {
+        guard let value = entry["value"] as? [String: Any],
+              let parameters = value["parameters"] as? [Int],
+              parameters.count == 3
+        else { return nil }
+        let flags = parameters[2]
+        var modifiers: UInt32 = 0
+        if flags & 0x20000 != 0 { modifiers |= UInt32(shiftKey) }
+        if flags & 0x40000 != 0 { modifiers |= UInt32(controlKey) }
+        if flags & 0x80000 != 0 { modifiers |= UInt32(optionKey) }
+        if flags & 0x100000 != 0 { modifiers |= UInt32(cmdKey) }
+        return HotKey.from(keyCode: UInt32(parameters[1]), modifiers: modifiers)
+    }
 }
