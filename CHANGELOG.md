@@ -4,6 +4,7 @@
 - Changed: Both left and right clicks on the menu-bar item open the menu.
 - Fixed: Settings no longer overwrites an invalid config.json, and a broken hand edit keeps the running shortcuts.
 - Fixed: Typed keywords no longer match across app switches or clicks, and a slow script never pastes into another app.
+- Fixed: A slow or hanging shell profile no longer stops script snippets from running.
 
 ## 0.2.4 - 2026-11-21
 - Changed: Launch at Login is toggled only in Settings, not in the permission wizard summary.
