@@ -17,7 +17,7 @@ account, no telemetry.
 
 ## Install
 
-Requires macOS 14+ on Apple silicon and Homebrew 7+.
+Requires macOS 15+ on Apple silicon and Homebrew 7+.
 
 ```sh
 brew trust ernilambar/tap

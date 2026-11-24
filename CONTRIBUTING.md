@@ -7,7 +7,7 @@ the one-sentence positioning and the scope it rules out, see
 
 ## Requirements
 
-- macOS 14+
+- macOS 15+
 - Swift 6 toolchain (Command Line Tools are enough; Xcode is not required)
 
 ## Build & run

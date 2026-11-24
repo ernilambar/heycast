@@ -9,7 +9,7 @@ hotkeys, ServiceManagement; Swift Testing for the suite.
 
 ## Setup
 
-- macOS 14+ on Apple silicon (arm64 only; no Intel or universal build).
+- macOS 15+ on Apple silicon (arm64 only; no Intel or universal build).
 - A Swift 6 toolchain: Command Line Tools are enough, Xcode is not required.
   `make test` injects the Swift Testing macro plugin when Xcode is absent.
 - No package dependencies, no build system beyond SwiftPM and `make`.
