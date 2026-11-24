@@ -52,6 +52,28 @@ import Testing
         #expect(keymap == .default)
     }
 
+    @Test func issuesExplainInvalidAndDuplicateShortcuts() {
+        let config = AppConfig(keymaps: [
+            "palette": "ctl+space",
+            "snippets": "ctrl+alt+k",
+            "window.left": "ctrl+alt+k",
+            "windowLeft": "ctrl+alt+left",
+        ])
+        let issues = config.keymapIssues()
+
+        #expect(issues[.palette]?.contains("not a valid shortcut") == true)
+        #expect(issues[.snippets] == nil)
+        #expect(issues[.window(.left)]?.contains("Open Snippets") == true)
+        #expect(config.resolvedKeymap()[.window(.left)] == nil)
+        #expect(config.unknownKeymapActions == ["windowLeft"])
+    }
+
+    @Test func validConfigHasNoIssues() {
+        let config = AppConfig(keymaps: ["palette": "cmd+shift+k", "snippets": ""])
+        #expect(config.keymapIssues().isEmpty)
+        #expect(config.unknownKeymapActions.isEmpty)
+    }
+
     @Test func defaultsCoverWindowActions() {
         let keymap = Keymap.default
 

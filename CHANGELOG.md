@@ -2,9 +2,11 @@
 
 ## X.X.X - YYYY-MM-DD
 - Changed: Both left and right clicks on the menu-bar item open the menu.
+- Changed: Settings explains invalid, duplicate and unknown shortcuts in config.json and refuses to record duplicates.
 - Fixed: Settings no longer overwrites an invalid config.json, and a broken hand edit keeps the running shortcuts.
 - Fixed: Typed keywords no longer match across app switches or clicks, and a slow script never pastes into another app.
 - Fixed: A slow or hanging shell profile no longer stops script snippets from running.
+- Fixed: Launch at Login stays on while awaiting approval and updates after returning from System Settings.
 
 ## 0.2.4 - 2026-11-21
 - Changed: Launch at Login is toggled only in Settings, not in the permission wizard summary.

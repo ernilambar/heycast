@@ -40,6 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// return so a new Accessibility grant takes effect without a relaunch.
     func applicationDidBecomeActive(_ notification: Notification) {
         snippetExpander?.startIfNeeded()
+        // Returning from System Settings → Login Items must show the new
+        // approval state, not the one from before the user left.
+        settings?.refresh()
     }
 
     private func configureSettings() {

@@ -52,6 +52,11 @@ struct SettingsView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.red)
                     .lineLimit(2)
+            } else if let configWarning = model.configWarning {
+                Label(configWarning, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                    .lineLimit(2)
             } else {
                 Text("Saved to config.json.")
                     .font(.system(size: 11))
@@ -149,13 +154,6 @@ struct SettingsView: View {
                     model.beginRecording(action)
                 }
                 .font(.system(size: 12))
-
-                if hotKey != nil, model.issues[action] != nil {
-                    Button("Change shortcut") {
-                        model.beginRecording(action)
-                    }
-                    .font(.system(size: 12))
-                }
 
                 Button("Remove") { model.setShortcut(nil, for: action) }
                     .font(.system(size: 12))

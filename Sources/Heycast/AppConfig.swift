@@ -21,14 +21,32 @@ extension AppConfig {
     /// Resolves every known action, rejecting malformed and duplicate
     /// shortcuts so one command cannot silently replace another.
     func resolvedKeymap() -> Keymap {
+        resolve().keymap
+    }
+
+    /// Why a configured shortcut is not the one in effect, keyed by action,
+    /// so Settings can explain a value it would otherwise show as chosen.
+    func keymapIssues() -> [KeymapAction: String] {
+        resolve().issues
+    }
+
+    /// Keys under `keymaps` that name no action, sorted.
+    var unknownKeymapActions: [String] {
+        (keymaps ?? [:]).keys.filter { KeymapAction(rawValue: $0) == nil }.sorted()
+    }
+
+    private func resolve() -> (keymap: Keymap, issues: [KeymapAction: String]) {
         var shortcuts: [KeymapAction: HotKey] = [:]
         var owners: [HotKey: KeymapAction] = [:]
+        var issues: [KeymapAction: String] = [:]
 
         for action in KeymapAction.allCases {
-            guard let hotKey = resolvedShortcut(
+            let (resolved, issue) = resolvedShortcut(
                 for: action,
                 configured: keymaps?[action.rawValue]
-            ) else { continue }
+            )
+            issues[action] = issue
+            guard let hotKey = resolved else { continue }
 
             if let owner = owners[hotKey] {
                 NSLog(
@@ -38,6 +56,7 @@ extension AppConfig {
                     hotKey.displayString,
                     action.rawValue
                 )
+                issues[action] = "\(hotKey.displayString) is already used by \(owner.settingsTitle); disabled."
                 continue
             }
 
@@ -45,21 +64,21 @@ extension AppConfig {
             shortcuts[action] = hotKey
         }
 
-        for key in (keymaps ?? [:]).keys where KeymapAction(rawValue: key) == nil {
+        for key in unknownKeymapActions {
             NSLog("Heycast: unknown keymap action \"%@\" in config.json", key)
         }
 
-        return Keymap(shortcuts: shortcuts)
+        return (Keymap(shortcuts: shortcuts), issues)
     }
 
     private func resolvedShortcut(
         for action: KeymapAction,
         configured: String?
-    ) -> HotKey? {
-        guard let configured else { return action.defaultShortcut }
+    ) -> (HotKey?, String?) {
+        guard let configured else { return (action.defaultShortcut, nil) }
 
         let value = configured.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else { return nil }
+        guard !value.isEmpty else { return (nil, nil) }
 
         guard let parsed = HotKey.parse(value) else {
             let fallback = action.defaultShortcut?.displayString ?? "disabled"
@@ -69,9 +88,9 @@ extension AppConfig {
                 value,
                 fallback
             )
-            return action.defaultShortcut
+            return (action.defaultShortcut, "“\(value)” in config.json is not a valid shortcut; using \(fallback).")
         }
-        return parsed
+        return (parsed, nil)
     }
 
     static func load(from url: URL = SupportDirectory.configFile) -> AppConfig {

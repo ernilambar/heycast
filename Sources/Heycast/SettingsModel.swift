@@ -17,12 +17,16 @@ final class SettingsModel: ObservableObject {
     @Published private(set) var recording: KeymapAction?
     @Published private(set) var issues: [KeymapAction: String] = [:]
     @Published private(set) var errorMessage: String?
+    /// A problem in `config.json` that is not a failed write, such as an
+    /// action name no release knows.
+    @Published private(set) var configWarning: String?
 
     private let configURL: URL
     private let snippetsDirectory: () -> URL
     private let registrationIssues: () -> [KeymapAction: String]
     private let onApply: () -> Void
     private var monitor: Any?
+    private var configIssues: [KeymapAction: String] = [:]
 
     init(
         configURL: URL = SupportDirectory.configFile,
@@ -91,6 +95,11 @@ final class SettingsModel: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         isUsingDefaultSnippetsDirectory = configured?.isEmpty ?? true
         launchAtLogin = LoginItem.state
+        configIssues = config.keymapIssues()
+        let unknown = config.unknownKeymapActions
+        configWarning = unknown.isEmpty
+            ? nil
+            : "config.json names unknown actions: \(unknown.joined(separator: ", "))."
         refreshIssues()
     }
 
@@ -200,6 +209,7 @@ final class SettingsModel: ObservableObject {
                 at: configURL
             )
             errorMessage = nil
+            configIssues = AppConfig.load(from: configURL).keymapIssues()
             onApply()
             refreshIssues()
         } catch {
@@ -212,13 +222,21 @@ final class SettingsModel: ObservableObject {
         }
     }
 
+    /// Config, registration and macOS problems can all hit one row; they are
+    /// joined so none hides another.
     private func refreshIssues() {
-        var issues = registrationIssues()
+        var issues = configIssues
+        func add(_ message: String, for action: KeymapAction) {
+            issues[action] = issues[action].map { "\($0) \(message)" } ?? message
+        }
+        for (action, message) in registrationIssues() {
+            add(message, for: action)
+        }
         for action in KeymapAction.allCases {
             guard let hotKey = shortcut(for: action),
                   let owner = SystemShortcuts.owner(of: hotKey)
             else { continue }
-            issues[action] = "\(owner.title) already uses \(hotKey.displayString)."
+            add("\(owner.title) already uses \(hotKey.displayString).", for: action)
         }
         self.issues = issues
     }
@@ -251,9 +269,20 @@ final class SettingsModel: ObservableObject {
             return true
         }
 
-        setShortcut(hotKey, for: action)
+        record(hotKey, for: action)
         cancelRecording()
         return true
+    }
+
+    /// Saves a recorded shortcut unless another action already owns it:
+    /// the config would keep only one of the two, silently.
+    func record(_ hotKey: HotKey, for action: KeymapAction) {
+        if let owner = KeymapAction.allCases.first(where: { $0 != action && shortcut(for: $0) == hotKey }) {
+            NSSound.beep()
+            issues[action] = "\(hotKey.displayString) is already used by \(owner.settingsTitle)."
+            return
+        }
+        setShortcut(hotKey, for: action)
     }
 
     private static func carbonModifiers(from flags: NSEvent.ModifierFlags) -> UInt32 {

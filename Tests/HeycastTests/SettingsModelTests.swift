@@ -90,4 +90,31 @@ import Testing
 
         #expect(model.issues[.palette]?.contains("Spotlight") == true)
     }
+
+    @Test func recordingAShortcutAnotherActionOwnsIsRejected() throws {
+        var applied = 0
+        let (model, directory) = try makeModel { applied += 1 }
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        model.reload()
+        let paletteKey = try #require(model.shortcut(for: .palette))
+        model.record(paletteKey, for: .snippets)
+
+        #expect(applied == 0)
+        #expect(model.shortcut(for: .snippets) == .snippetDefault)
+        #expect(model.issues[.snippets]?.contains("Open Palette") == true)
+    }
+
+    @Test func invalidHandEditIsExplainedOnTheRow() throws {
+        let (model, directory) = try makeModel()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        try #"{"keymaps":{"palette":"ctl+space","bogus":"alt+b"}}"#
+            .write(to: directory.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
+        model.reload()
+
+        #expect(model.shortcut(for: .palette) == .default)
+        #expect(model.issues[.palette]?.contains("ctl+space") == true)
+        #expect(model.configWarning?.contains("bogus") == true)
+    }
 }
