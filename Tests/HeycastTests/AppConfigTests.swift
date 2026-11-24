@@ -47,6 +47,32 @@ private func temporaryDirectory() throws -> URL {
         #expect(config.resolvedKeymap() == .default)
     }
 
+    @Test func unreadableFileIsReportedAsFailure() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("config.json")
+        try #"{"#.write(to: file, atomically: true, encoding: .utf8)
+        #expect(throws: (any Error).self) { try AppConfig.loadResult(from: file).get() }
+    }
+
+    @Test func saveRefusesToOverwriteMalformedFile() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("config.json")
+        for original in [
+            #"{"keymaps":{"palette":"cmd+k"},"futureSetting":true"#,
+            #"{"keymaps":5,"futureSetting":true}"#,
+        ] {
+            try original.write(to: file, atomically: true, encoding: .utf8)
+            #expect(throws: AppConfig.SaveError.self) {
+                try AppConfig.save(keymaps: ["palette": "alt+space"], snippetsDirectory: nil, at: file)
+            }
+            #expect(try String(contentsOf: file, encoding: .utf8) == original)
+        }
+    }
+
     @Test func absolutePathIsCreated() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

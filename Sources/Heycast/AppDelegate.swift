@@ -67,7 +67,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// snippets folder is re-resolved, so a settings change or a hand edit
     /// needs no relaunch. Unchanged values are left alone to avoid churn.
     private func applyConfig() {
-        let config = AppConfig.load()
+        let config: AppConfig
+        switch AppConfig.loadResult() {
+        case .success(let loaded):
+            config = loaded
+        case .failure:
+            // A typo in a hand edit must not re-register the defaults over
+            // the user's shortcuts; keep what is running until it is fixed.
+            guard keymap == nil else {
+                settings?.refresh()
+                return
+            }
+            config = AppConfig()
+        }
         let keymap = config.resolvedKeymap()
         if keymap != self.keymap {
             installKeymap(keymap)

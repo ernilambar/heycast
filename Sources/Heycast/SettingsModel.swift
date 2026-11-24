@@ -71,7 +71,15 @@ final class SettingsModel: ObservableObject {
     /// Reads the file back, so an external edit and the settings window
     /// cannot drift apart.
     func reload() {
-        let config = AppConfig.load(from: configURL)
+        let config: AppConfig
+        switch AppConfig.loadResult(from: configURL) {
+        case .success(let loaded):
+            config = loaded
+            errorMessage = nil
+        case .failure:
+            config = AppConfig()
+            errorMessage = "config.json is invalid; fix it before changing settings."
+        }
         let keymap = config.resolvedKeymap()
         var shortcuts: [KeymapAction: HotKey?] = [:]
         for action in KeymapAction.allCases {

@@ -75,16 +75,30 @@ extension AppConfig {
     }
 
     static func load(from url: URL = SupportDirectory.configFile) -> AppConfig {
-        guard FileManager.default.fileExists(atPath: url.path) else { return AppConfig() }
+        (try? loadResult(from: url).get()) ?? AppConfig()
+    }
+
+    /// Like `load`, but reports an unreadable file instead of hiding it
+    /// behind defaults, so callers can keep the last good config.
+    static func loadResult(from url: URL = SupportDirectory.configFile) -> Result<AppConfig, Error> {
+        guard FileManager.default.fileExists(atPath: url.path) else { return .success(AppConfig()) }
         do {
-            return try JSONDecoder().decode(AppConfig.self, from: Data(contentsOf: url))
+            return .success(try JSONDecoder().decode(AppConfig.self, from: Data(contentsOf: url)))
         } catch {
             NSLog(
                 "Heycast: ignoring unreadable config at %@: %@",
                 url.path,
                 error.localizedDescription
             )
-            return AppConfig()
+            return .failure(error)
+        }
+    }
+
+    enum SaveError: Error, LocalizedError {
+        case invalidExistingFile
+
+        var errorDescription: String? {
+            "config.json is not valid JSON; fix or remove it first"
         }
     }
 
@@ -138,7 +152,9 @@ extension AppConfig {
 
     /// Writes the settings the window owns, leaving every other key in the
     /// file alone. Atomic, so a failed write leaves the previous config in
-    /// place and the running app never sees a half-written file.
+    /// place and the running app never sees a half-written file. An existing
+    /// file that is not a JSON object is never overwritten: starting from
+    /// `{}` would drop every key the user wrote.
     static func save(
         keymaps: [String: String],
         snippetsDirectory: String?,
@@ -150,9 +166,16 @@ extension AppConfig {
         )
 
         var object: [String: Any] = [:]
-        if let data = try? Data(contentsOf: url),
-           let existing = try? JSONSerialization.jsonObject(with: data),
-           let dictionary = existing as? [String: Any] {
+        if FileManager.default.fileExists(atPath: url.path) {
+            let data = try Data(contentsOf: url)
+            // Valid JSON can still fail to decode (`"keymaps": 5`); the app
+            // then runs on defaults, so saving would write them over the
+            // user's values. Both must succeed before the file is reused.
+            guard (try? JSONDecoder().decode(AppConfig.self, from: data)) != nil,
+                  let dictionary = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            else {
+                throw SaveError.invalidExistingFile
+            }
             object = dictionary
         }
 

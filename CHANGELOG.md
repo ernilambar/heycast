@@ -2,6 +2,7 @@
 
 ## X.X.X - YYYY-MM-DD
 - Changed: Both left and right clicks on the menu-bar item open the menu.
+- Fixed: Settings no longer overwrites an invalid config.json, and a broken hand edit keeps the running shortcuts.
 
 ## 0.2.4 - 2026-11-21
 - Changed: Launch at Login is toggled only in Settings, not in the permission wizard summary.
