@@ -65,7 +65,15 @@ identity_present() {
 
 # resolve_sign_identity: set `sign_identity` for the bundle about to be built.
 # Honours HEYCAST_SIGN_IDENTITY first, then the identity for the build mode.
+# A release build accepts no override but "Heycast": any other identity skips
+# the designated-requirement check and would pass the gate falsely.
 resolve_sign_identity() {
+    if [ "${HEYCAST_RELEASE:-0}" = "1" ] && [ -n "${HEYCAST_SIGN_IDENTITY:-}" ] &&
+        [ "$HEYCAST_SIGN_IDENTITY" != "$release_identity" ]; then
+        printf 'error: release builds sign with "%s"; unset HEYCAST_SIGN_IDENTITY (%s)\n' \
+            "$release_identity" "$HEYCAST_SIGN_IDENTITY" >&2
+        exit 1
+    fi
     if [ -n "${HEYCAST_SIGN_IDENTITY:-}" ]; then
         sign_identity="$HEYCAST_SIGN_IDENTITY"
         resolve_bundle_variant

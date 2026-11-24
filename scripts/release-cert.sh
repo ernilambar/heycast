@@ -25,6 +25,9 @@ cd "$root"
 release_dir="${HEYCAST_RELEASE_DIR:-$HOME/.heycast/release}"
 p12="$release_dir/heycast.p12"
 password_file="$release_dir/password.txt"
+# Only CI's throwaway keychain uses it; kept beside the key so the secret
+# commands below and CONTRIBUTING.md read the same file.
+keychain_password_file="$release_dir/keychain-password.txt"
 keychain="${HEYCAST_KEYCHAIN:-$HOME/Library/Keychains/login.keychain-db}"
 
 # Set by create_identity and cleaned up by its trap; not local for that reason.
@@ -152,15 +155,18 @@ create_identity() {
 
 print_next_steps() {
     local repo="${HEYCAST_GITHUB_REPO:-ernilambar/heycast}"
+    if [ ! -f "$keychain_password_file" ]; then
+        random_secret 32 >"$keychain_password_file"
+    fi
     printf '\nidentity:  %s\nbackup:    %s\npassword:  %s\n\n' \
         "$release_identity" "$p12" "$password_file"
     printf 'The .p12 and its password are the release key. Copy both somewhere\n'
     printf 'that outlives this Mac before doing anything else.\n\n'
-    printf 'Store them as GitHub Actions secrets:\n\n'
-    printf '  base64 -i %s | gh secret set HEYCAST_P12 --repo %s\n' "$p12" "$repo"
-    printf '  gh secret set HEYCAST_P12_PASSWORD --repo %s < %s\n' "$repo" "$password_file"
-    printf '  %s | gh secret set KEYCHAIN_PASSWORD --repo %s\n' \
-        "$(random_secret 32)" "$repo"
+    printf 'Store them as secrets on the release environment:\n\n'
+    printf '  base64 -i %s | gh secret set HEYCAST_P12 --env release --repo %s\n' "$p12" "$repo"
+    printf '  gh secret set HEYCAST_P12_PASSWORD --env release --repo %s < %s\n' "$repo" "$password_file"
+    printf '  gh secret set KEYCHAIN_PASSWORD --env release --repo %s < %s\n' \
+        "$repo" "$keychain_password_file"
     printf '\nImport the identity on any other machine that signs a release:\n\n'
     printf '  security import %s -k login.keychain-db -P "$(cat %s)" -T /usr/bin/codesign\n' \
         "$p12" "$password_file"

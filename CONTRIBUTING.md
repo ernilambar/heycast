@@ -258,7 +258,8 @@ say so in the release notes so users know to grant Accessibility again.
 make release-cert     # creates "Heycast", exports .p12, records the requirement
 ```
 
-The .p12 and its password go to `~/.heycast/release/` (`chmod 600`), never into
+The .p12, its password and a CI keychain password (`keychain-password.txt`) go
+to `~/.heycast/release/` (`chmod 600`), never into
 the repository; `.gitignore` blocks `*.p12`, `*.pem` and `*.keychain*` anyway.
 
 **Back that folder up somewhere that outlives this Mac** — a password manager,
@@ -354,11 +355,14 @@ Sources/Heycast/
   ApplicationCatalog.swift  installed app scan and match ranking
   Snippet.swift          snippet front matter, scan/validation, placeholders
   SnippetExpander.swift  typed-keyword matching and expansion event tap
+  SnippetRunner.swift    script snippets: ownership check, timeout, login-shell PATH
   SyntheticKeyboard.swift synthesized backspaces and ⌘V for snippets
   PaletteSearch.swift    merged app, snippet and command ranking; palette items
   UsageStore.swift       persisted launch counts and recency, usage scoring
   HotKeyController.swift global hotkeys via Carbon RegisterEventHotKey
   LoginItem.swift        Launch at Login through SMAppService
+  WindowAction.swift     window layouts and target-screen choice
+  WindowManager.swift    AX coordinate flips, window moves, one-step undo
   SettingsModel.swift    settings rows, hotkey recorder, atomic config writes
   SettingsView.swift     settings window content
   SettingsController.swift  settings window lifecycle
@@ -370,7 +374,7 @@ Sources/Heycast/
   PermissionWizardController.swift  setup window lifecycle
   AboutView.swift        About panel content and version formatting
   AboutController.swift  About window lifecycle
-Resources/Info.plist     LSUIElement, bundle metadata, TCC usage strings
+Resources/Info.plist     LSUIElement, bundle metadata, version
 Resources/release-identity.txt  designated requirement every release must match
 Resources/AppIcon.svg    app icon source, 1024x1024
 Resources/AppIcon.icns   generated icon bundled as Contents/Resources/AppIcon.icns
