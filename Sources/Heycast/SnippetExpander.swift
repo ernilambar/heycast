@@ -239,6 +239,7 @@ final class SnippetExpander {
     private func paste(_ text: String, replacingKeywordOfLength keywordLength: Int, target: pid_t?) {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target else {
             NSLog("Heycast: snippet skipped; the frontmost app changed before it was ready")
+            Toast.show("Snippet skipped; the app in front changed.")
             NSSound.beep()
             isExpanding = false
             return

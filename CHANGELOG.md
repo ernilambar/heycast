@@ -1,6 +1,7 @@
 # Changelog
 
 ## X.X.X - YYYY-MM-DD
+- Added: A brief on-screen message explains a failed app launch, snippet script, paste or window command.
 - Changed: Both left and right clicks on the menu-bar item open the menu.
 - Changed: Settings explains invalid, duplicate and unknown shortcuts in config.json and refuses to record duplicates.
 - Fixed: Settings no longer overwrites an invalid config.json, and a broken hand edit keeps the running shortcuts.

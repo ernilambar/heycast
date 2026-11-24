@@ -244,6 +244,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               target.processIdentifier != ProcessInfo.processInfo.processIdentifier
         else {
             NSLog("Heycast: window %@: no app in front", action.rawValue)
+            Toast.show("No window to move.")
             return
         }
 

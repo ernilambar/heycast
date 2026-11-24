@@ -195,6 +195,8 @@ final class PaletteController: NSObject, NSWindowDelegate {
             // @Sendable it inherits @MainActor and traps the isolation check.
             if let error {
                 NSLog("Heycast: could not open %@: %@", app.name, error.localizedDescription)
+                let message = "Could not open \(app.name)."
+                Task { @MainActor in Toast.show(message) }
             } else {
                 UsageStore.shared.recordLaunch(of: app)
             }
@@ -236,6 +238,7 @@ final class PaletteController: NSObject, NSWindowDelegate {
 
         guard let target, !target.isTerminated else {
             NSLog("Heycast: copied snippet “%@” to the clipboard; no app to paste into", keyword)
+            Toast.show("Snippet copied; no app to paste into.")
             return
         }
 
@@ -285,6 +288,7 @@ final class PaletteController: NSObject, NSWindowDelegate {
         let timeout = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
                 NSLog("Heycast: %@ did not come forward; snippet left on the clipboard", app.localizedName ?? "target app")
+                Toast.show("Snippet copied; \(app.localizedName ?? "the app") did not come forward.")
                 self?.cancelPendingActivation()
             }
         }

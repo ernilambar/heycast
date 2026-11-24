@@ -38,7 +38,7 @@ name; each value is a shortcut string.
 Window commands act on the focused window and need Accessibility. All of them
 are also in the menu-bar item's "Window" submenu; thirds and undo ship unbound
 and are used from that submenu. Each action applies one fixed layout — there is
-no cycling. A full-screen window is left untouched and the attempt is logged,
+no cycling. A full-screen window is left untouched with a brief message,
 so Heycast never forces a Space transition. Undo history is in memory only and
 holds one step per window.
 

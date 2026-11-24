@@ -363,6 +363,7 @@ Sources/Heycast/
   SettingsView.swift     settings window content
   SettingsController.swift  settings window lifecycle
   Clipboard.swift        pasteboard snapshot restored after a snippet paste
+  Toast.swift            transient failure message that never takes focus
   Permission.swift       TCC permissions: status checks, requests, panes
   PermissionWizardModel.swift  wizard steps, refresh on app activation
   PermissionWizardView.swift   wizard pages + summary

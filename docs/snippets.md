@@ -151,6 +151,7 @@ run from Terminal.
 | Inline trigger fails | Typed keyword stays in place |
 
 - Runs in the background, so the keyboard never stalls.
+- A failure also shows its reason briefly near the bottom of the screen.
 - Reads the clipboard with `pbpaste`; it still holds what you copied, because
   the script runs before Heycast writes to it.
 - Working directory is your home folder; stdin is empty.

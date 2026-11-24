@@ -74,11 +74,13 @@ final class WindowManager {
                 action.rawValue,
                 application.localizedName ?? "app"
             )
+            Toast.show("\(application.localizedName ?? "This app") has no window to move.")
             return
         }
 
         guard let axFrame = frame(of: window) else {
             NSLog("Heycast: window %@: cannot read the window frame", action.rawValue)
+            Toast.show("This window cannot be moved.")
             return
         }
 
@@ -101,6 +103,7 @@ final class WindowManager {
                 action.rawValue,
                 application.localizedName ?? "app"
             )
+            Toast.show("Full-screen windows are left alone.")
             return
         }
 
@@ -139,6 +142,7 @@ final class WindowManager {
                 "Heycast: window undo: nothing to undo for %@",
                 application.localizedName ?? "app"
             )
+            Toast.show("Nothing to undo.")
             return
         }
         set(frame, on: window, action: .undo)
@@ -245,6 +249,7 @@ final class WindowManager {
                 action.rawValue,
                 result.rawValue
             )
+            Toast.show("This window cannot be moved.")
         }
     }
 
@@ -266,6 +271,7 @@ final class WindowManager {
                 action.rawValue,
                 result.rawValue
             )
+            Toast.show("This window cannot be resized.")
         }
     }
 }

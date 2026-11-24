@@ -39,6 +39,8 @@ enum SnippetRunner {
             return try await resolve(snippet)
         } catch {
             NSLog("Heycast: snippet “%@” script %@", snippet.keyword, String(describing: error))
+            let message = "Snippet “\(snippet.keyword)” \(error)"
+            await MainActor.run { Toast.show(message) }
             return nil
         }
     }
